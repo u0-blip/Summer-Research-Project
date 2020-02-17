@@ -4,6 +4,11 @@ from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
 import pickle
 
+def centroid_region(verticesSinglePoly):
+    verticesSinglePoly = np.array(verticesSinglePoly)
+    centroid  = np.sum(verticesSinglePoly, axis=0)/verticesSinglePoly.shape[0]
+    return centroid
+
 def plot_hull(points, hull, plotIndex=None):
     
     fig = plt.figure()
@@ -27,6 +32,10 @@ def plot_hull(points, hull, plotIndex=None):
                 ax.plot(points[i][s, 0], points[i][s, 1], points[i][s, 2], "r-")
 
             ax.plot(points[i].T[0], points[i].T[1], points[i].T[2], "ko") 
+            temp = centroid_region(points[i])
+            ax.plot([temp[0]], [temp[1]], [temp[2]], 'go')
+
+    
 
     ax.set_xlabel('x')
     ax.set_ylabel('y')

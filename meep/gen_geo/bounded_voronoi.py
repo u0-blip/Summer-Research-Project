@@ -16,13 +16,21 @@ def in_box(towers, bounding_box):
 
     return np.logical_and(np.logical_and(x_in, y_in), z_in)
 
+def maxDist(points):
+    dist = 0
+    for i in range(len(points)):
+        for j in range(i):
+            if dist < np.linalg.norm(points[i] - points[j]):
+                dist  = np.linalg.norm(points[i] - points[j])
+    return dist
 
-def voronoi(towers, bounding_box):
+def generateBoundedVor(towers, bounding_box):
     # Select towers inside the bounding box
-    i = in_box(towers, bounding_box)
+    #i = in_box(towers, bounding_box)
     # Mirror points
-    points_center = towers[i, :]
+    # points_center = towers[i, :]
 
+    points_center = towers
     points_left = np.copy(points_center)
     points_right = np.copy(points_center)
     points_down = np.copy(points_center)
@@ -56,36 +64,53 @@ def voronoi(towers, bounding_box):
                 x = vor.vertices[index, 0]
                 y = vor.vertices[index, 1]
                 z = vor.vertices[index, 2]
-                if not(bounding_box[0] - eps <= x and x <= bounding_box[1] + eps and
-                       bounding_box[2] - eps <= y and y <= bounding_box[3] + eps and 
-                       bounding_box[4] - eps <= z and z <= bounding_box[5] + eps):
+                if not(bounding_box[0] - 3*eps <= x and x <= bounding_box[1] + 3*eps and
+                       bounding_box[2] - 3*eps <= y and y <= bounding_box[3] + 3*eps and 
+                       bounding_box[4] - 3*eps <= z and z <= bounding_box[5] + 3*eps):
                     flag = False
                     break
         if region != [] and flag:
             regions.append(region)
+
+
+    vor.filtered_points = points_center
+    vor.regions = regions
+    return points, vor
+
+def delPointsBadRatio(points, vor):
+    for region in vor.regions:
+        dist = maxDist(vor.vertices[region, :])
     
+def voronoi(towers, bounding_box):
+
+    # while delPointsBadRatio(points, vor):
+    #     points, vor = generateBoundedVor(points, bounding_box)
+
+    points, vor = generateBoundedVor(towers, bounding_box) 
+
     indexToDel = set()
+    dontAdd  = set()
     for i in range(len(vor.vertices)):
         for j in range(i):
             dist = np.linalg.norm(vor.vertices[i] - vor.vertices[j])
-            if dist < 0.005:
-                indexToDel.add(i)
-                indexToDel.add(j)
+            if dist < 0.05:
+                if i not in dontAdd:
+                    indexToDel.add(i)
+                    dontAdd.add(j)
     indexToDel = np.sort(np.array(list(indexToDel)))
-    # print(indexToDel)
+    print('points deleted ' + str(len(indexToDel)))
 
     for i in range(len(indexToDel)):
         
         index = indexToDel[len(indexToDel) - i -1]
-        vor.vertices  = np.delete(vor.vertices, index, 0)
+        # vor.vertices  = np.delete(vor.vertices, index, 0)
         for i, r in enumerate(vor.regions):
             r = np.array(r)
             not_delete = np.logical_not(r == index)
+            # print(r)
+            # print(not_delete)
             vor.regions[i] = r[not_delete]
     
-
-    vor.filtered_points = points_center
-    vor.regions = regions
     return vor
 
 def centroid_regionBackup(vertices):
@@ -107,24 +132,10 @@ def centroid_regionBackup(vertices):
     C_y = (1.0 / (6.0 * A)) * C_y
     return np.array([[C_x, C_y]])
 
-def centroid_region(vertices):
-    # Polygon's signed area
-    A = 0
-    # Centroid's x
-    C_x = 0
-    # Centroid's y
-    C_y = 0
-    Cz = 0
-    for i in range(0, len(vertices) - 1):
-        s = (vertices[i, 0] * vertices[i + 1, 1] - vertices[i + 1, 0] * vertices[i, 1])
-        A = A + s
-        C_x = C_x + (vertices[i, 0] + vertices[i + 1, 0]) * s
-        C_y = C_y + (vertices[i, 1] + vertices[i + 1, 1]) * s
-        Cz = Cz 
-    A = 0.5 * A
-    C_x = (1.0 / (6.0 * A)) * C_x
-    C_y = (1.0 / (6.0 * A)) * C_y
-    return np.array([[C_x, C_y]])
+def centroid_region(verticesSinglePoly):
+    verticesSinglePoly = np.array(verticesSinglePoly)
+    centroid  = np.sum(verticesSinglePoly, axis=0)/verticesSinglePoly.shape[0]
+    return centroid
 
 
 def plot_vor(vor_vertices, regions):

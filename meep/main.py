@@ -1,14 +1,39 @@
 from meep_funcs import *
+from gen_geo.bounded_voronoi import *
 import sys
 
 np.random.seed(15)
 
+def index2coord(index, size_arr, size_geo):
+    index = (index/size_arr - 0.5)*size_geo
+    return index
 
 def b_voronoi(n_towers = 20):
-    towers = np.random.rand(n_towers, 3)
 
-    bounding_box = np.array([0., 1., 0., 1., 0., 1.]) # [x_min, x_max, y_min, y_max]
-    vor = bounded_voronoi.voronoi(towers, bounding_box)
+    num_div = int(n_towers**(1/3))
+    
+    num_seed = num_div**3
+
+    points = np.zeros((num_seed, 3))
+    
+    p_range = np.array([0.9, 0.9, 0.9])
+    counter = 0
+    for i in range(num_div):
+        for j in range(num_div):
+            for k in range(num_div):
+                index = np.array([i,j,k])
+                points[counter, :] = index2coord(index, np.array([num_div, num_div, num_div]), p_range)
+                counter+=1
+
+    pRand = (np.random.rand(num_div**3, 3)-0.5)/num_div/5
+
+    bounding_box = np.array([-0.5, 0.5, -0.5, 0.5, -0.5, 0.5]) # [x_min, x_max, y_min, y_max]
+    points = np.subtract(points, pRand)
+    print(points.shape)
+    print(pRand.shape)
+    print(points)
+    vor = voronoi(points, bounding_box)
+
 
     points = []
     hull = []
@@ -18,7 +43,9 @@ def b_voronoi(n_towers = 20):
 
     hull = convex_hull.get_conv_hull(points, 'polygon1.csv', 'polygon1-hull.csv')
 
+
     convex_hull.plot_hull(points, hull, plotIndex=[3])
+
     # convex_hull.plot_hull(points, hull)
     print('created ' + str(len(vor.regions)) + ' polygons')
 
@@ -52,7 +79,7 @@ def create_sim():
     #         boundary_layers=pml_layers,
     #         sources = source,
     #         epsilon_func = my_eps)
-            
+
     # gen_polygon_data()
 
     sim_diff_dist = mp.Simulation(resolution=30,
