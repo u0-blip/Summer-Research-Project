@@ -8,46 +8,6 @@ def index2coord(index, size_arr, size_geo):
     index = (index/size_arr - 0.5)*size_geo
     return index
 
-def b_voronoi(n_towers = 20):
-
-    num_div = int(n_towers**(1/3))
-    
-    num_seed = num_div**3
-
-    points = np.zeros((num_seed, 3))
-    
-    p_range = np.array([0.9, 0.9, 0.9])
-    counter = 0
-    for i in range(num_div):
-        for j in range(num_div):
-            for k in range(num_div):
-                index = np.array([i,j,k])
-                points[counter, :] = index2coord(index, np.array([num_div, num_div, num_div]), p_range)
-                counter+=1
-
-    pRand = (np.random.rand(num_div**3, 3)-0.5)/num_div/5
-
-    bounding_box = np.array([-0.5, 0.5, -0.5, 0.5, -0.5, 0.5]) # [x_min, x_max, y_min, y_max]
-    points = np.subtract(points, pRand)
-    print(points.shape)
-    print(pRand.shape)
-    print(points)
-    vor = voronoi(points, bounding_box)
-
-
-    points = []
-    hull = []
-
-    for i in range(len(vor.regions)):
-        points.append(vor.vertices[vor.regions[i]])
-
-    hull = convex_hull.get_conv_hull(points, 'polygon1.csv', 'polygon1-hull.csv')
-
-
-    convex_hull.plot_hull(points, hull, plotIndex=[3])
-
-    # convex_hull.plot_hull(points, hull)
-    print('created ' + str(len(vor.regions)) + ' polygons')
 
 def create_sim():
     size_cell = [2, 2, 2]
@@ -92,7 +52,7 @@ def create_sim():
     return sim_diff_dist
 
 
-b_voronoi(30)
+b_voronoi(120)
 
 # get_sim_output(str(sys.argv[2]), create_sim(), length_t = 40, out_every=0.6, get_3_field=False)
 # out_num_geo('checker_geo.bin', my_checker_geo, range_geo=[1.0,1.0,1.0], range_index=[100,100,100])

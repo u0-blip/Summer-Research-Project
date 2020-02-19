@@ -368,7 +368,7 @@ if __name__== "__main__":
     #     get_output_data(name_job, step, frame, num_intervals, meta_data)
 
     # run on TeamViewer
-    # shutil.copyfile('C:/Users/zivan/abaqusMacros.py', r'C:/peter_abaqus/Summer-Research-Project/abaqus_macro/macro.py')
+    # shutil.copyfile('C:/Users/dche145/abaqusMacros.py', r'C:/peter_abaqus/Summer-Research-Project/abaqus_macro/macro.py')
     # shutil.copyfile('C:/temp/dflux.inp', r'C:/peter_abaqus/Summer-Research-Project/abaqus_working_space/abaqus_out/dflux.inp')
     # shutil.copyfile('C:/temp/umat_test.inp', r'C:/peter_abaqus/Summer-Research-Project/abaqus_working_space/abaqus_out/umat_test.inp')
     # execfile('C:/peter_abaqus/Summer-Research-Project/abaqus_macro/main.py', __main__.__dict__)

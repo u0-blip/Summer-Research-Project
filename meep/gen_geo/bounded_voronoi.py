@@ -3,7 +3,10 @@ import numpy as np
 import scipy as sp
 import scipy.spatial
 import sys
+import pickle
+
 from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting 
+from gen_geo import convex_hull
 
 eps = sys.float_info.epsilon
 
@@ -75,43 +78,108 @@ def generateBoundedVor(towers, bounding_box):
 
     vor.filtered_points = points_center
     vor.regions = regions
-    return points, vor
+    return vor
 
-def delPointsBadRatio(points, vor):
-    for region in vor.regions:
+def del_bad_poly_ratio(vor, hull):
+    seed_of_regions_to_keep = []
+    for i, region in enumerate(vor.regions):
         dist = maxDist(vor.vertices[region, :])
-    
-def voronoi(towers, bounding_box):
+        ratio = dist/(hull[i].volume**(1/3.))
+        # print(ratio)
+        if ratio <= 2.5:
+            seed_of_regions_to_keep.append(vor.points[i])
 
-    # while delPointsBadRatio(points, vor):
-    #     points, vor = generateBoundedVor(points, bounding_box)
+    # print('points is ')
+    # print(len(seed_of_regions_to_keep))
+    return seed_of_regions_to_keep
 
-    points, vor = generateBoundedVor(towers, bounding_box) 
-
-    indexToDel = set()
-    dontAdd  = set()
+def del_points_too_close(vor):
+    # merge points doesn't actually work because the geometry will have empty regions
+    merge_points = []
     for i in range(len(vor.vertices)):
-        for j in range(i):
+        for j in range(i-1):
             dist = np.linalg.norm(vor.vertices[i] - vor.vertices[j])
             if dist < 0.05:
-                if i not in dontAdd:
-                    indexToDel.add(i)
-                    dontAdd.add(j)
-    indexToDel = np.sort(np.array(list(indexToDel)))
-    print('points deleted ' + str(len(indexToDel)))
+                in_sets = False
+                for sets in merge_points:
+                    if i in sets or j in sets:
+                        sets.add(i)
+                        sets.add(j)
+                        in_sets = True
+                        break
+                if not in_sets:
+                    merge_points.append({i,j})
 
-    for i in range(len(indexToDel)):
-        
-        index = indexToDel[len(indexToDel) - i -1]
-        # vor.vertices  = np.delete(vor.vertices, index, 0)
-        for i, r in enumerate(vor.regions):
-            r = np.array(r)
-            not_delete = np.logical_not(r == index)
-            # print(r)
-            # print(not_delete)
-            vor.regions[i] = r[not_delete]
-    
+    merge_to_points = [sets.pop() for sets in merge_points]
+    # print(merge_points)
+
+    # indexToDel = np.sort(np.array(list(indexToDel)))
+    for region in vor.regions:
+        for i_region_point in range(len(region)):
+            for i_points_set, points_set in enumerate(merge_points):
+                if region[i_region_point] in points_set:
+                    # print('sub ' + str(region[i_region_point]) + ' to ' + str(merge_to_points[i_points_set]))
+                    region[i_region_point] = merge_to_points[i_points_set]
+                    break
     return vor
+
+def handle_bad_mesh_geo(vor, bounding_box):
+
+    # vor = generateBoundedVor(v_seed_points, bounding_box) 
+
+    v_seed_points = vor.points
+    hull_seed_points = []
+    hull = []
+
+    name_points = 'polygon1.csv'
+    name_hull = 'polygon1-hull.csv'
+
+# this is a do while loop
+
+    hull_seed_points = [vor.vertices[region] for region in vor.regions]
+    hull, faces = convex_hull.get_conv_hull(hull_seed_points)
+
+    v_seed_points = del_bad_poly_ratio(vor, hull)
+
+    # print('seeds left is ')
+    # print(len(v_seed_points))
+
+    vor = generateBoundedVor(v_seed_points, bounding_box) 
+    # print(vor.regions[0])
+    vor = del_points_too_close(vor)
+    # print(vor.regions[0])
+
+    # print(len(vor.regions))
+    hull_seed_points = [vor.vertices[region] for region in vor.regions]
+    hull, faces = convex_hull.get_conv_hull(hull_seed_points)
+
+# finishing up and writing points to the file
+    for i in range(len(hull_seed_points)):
+        hull_seed_points[i] = hull_seed_points[i].tolist()
+        
+    with open(name_points, 'wb') as f:
+        pickle.dump(hull_seed_points, f, protocol=2)
+    with open(name_hull, 'wb') as f:
+        pickle.dump(faces, f, protocol=2)
+
+
+    # return them for plotting purpose
+    return hull_seed_points, hull, vor
+
+
+def b_voronoi(n_towers = 20):
+
+    v_seed_points = np.random.rand(n_towers, 3) - 0.5
+
+    bounding_box = np.array([-0.5, 0.5, -0.5, 0.5, -0.5, 0.5]) # [x_min, x_max, y_min, y_max]
+
+    vor = generateBoundedVor(v_seed_points, bounding_box) 
+    hull_seed_points, hull, vor = handle_bad_mesh_geo(vor, bounding_box)
+
+    convex_hull.plot_hull(hull_seed_points, hull, plotIndex=[3])
+
+    print('created ' + str(len(vor.regions)) + ' polygons')
+    # convex_hull.plot_hull(points, hull)
 
 def centroid_regionBackup(vertices):
     # Polygon's signed area

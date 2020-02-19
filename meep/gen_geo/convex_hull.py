@@ -43,7 +43,7 @@ def plot_hull(points, hull, plotIndex=None):
     plt.show()
 
 
-def get_conv_hull(points, name_points = 'polygon1.csv', name_hull = 'polygon1-hull.csv'):
+def get_conv_hull(points):
     # points = np.array([[0, 0, 0], [1, 1, 2] ,[1.5, 0.5, 1], [1.5, -0.5, 3], [1.25, 0.3, -1], [1, 0, 2], [1.25, -0.3, -1], [1, -1, 3]])
     
     if type(points[0]) is not list and type(points[0]) is not np.ndarray:
@@ -52,21 +52,13 @@ def get_conv_hull(points, name_points = 'polygon1.csv', name_hull = 'polygon1-hu
     else:
         hull = []
         faces = []
-        for i, polygon in enumerate(points):
-            hull.append(ConvexHull(polygon))
+        for i in range(len(points)):
+            hull.append(ConvexHull(points[i]))
             faces.append((hull[i].simplices + 1).tolist())
     # np.savetxt(name_points, points, delimiter=",")
     # np.savetxt(name_hull, faces+1, delimiter=",")
 
-    for i in range(len(points)):
-        points[i] = points[i].tolist()
-
-    with open(name_points, 'wb') as f:
-        pickle.dump(points, f, protocol=2)
-    with open(name_hull, 'wb') as f:
-        pickle.dump(faces, f, protocol=2)
-
-    return hull
+    return hull, faces
 
 if __name__ == "__main__":
     points = np.random.rand(30, 2)   # 30 random points in 2-D
