@@ -52,7 +52,7 @@ def create_sim():
     return sim_diff_dist
 
 
-b_voronoi(120)
+b_voronoi(30)
 
 # get_sim_output(str(sys.argv[2]), create_sim(), length_t = 40, out_every=0.6, get_3_field=False)
 # out_num_geo('checker_geo.bin', my_checker_geo, range_geo=[1.0,1.0,1.0], range_index=[100,100,100])

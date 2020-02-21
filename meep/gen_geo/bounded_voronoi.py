@@ -6,7 +6,7 @@ import sys
 import pickle
 
 from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting 
-from gen_geo import convex_hull
+from gen_geo.convex_hull import *
 
 eps = sys.float_info.epsilon
 
@@ -80,6 +80,7 @@ def generateBoundedVor(towers, bounding_box):
     vor.regions = regions
     return vor
 
+
 def del_bad_poly_ratio(vor, hull):
     seed_of_regions_to_keep = []
     for i, region in enumerate(vor.regions):
@@ -131,13 +132,11 @@ def handle_bad_mesh_geo(vor, bounding_box):
     hull_seed_points = []
     hull = []
 
-    name_points = 'polygon1.csv'
-    name_hull = 'polygon1-hull.csv'
 
 # this is a do while loop
 
     hull_seed_points = [vor.vertices[region] for region in vor.regions]
-    hull, faces = convex_hull.get_conv_hull(hull_seed_points)
+    hull, faces = get_conv_hull(hull_seed_points)
 
     v_seed_points = del_bad_poly_ratio(vor, hull)
 
@@ -151,23 +150,19 @@ def handle_bad_mesh_geo(vor, bounding_box):
 
     # print(len(vor.regions))
     hull_seed_points = [vor.vertices[region] for region in vor.regions]
-    hull, faces = convex_hull.get_conv_hull(hull_seed_points)
+    hull, faces = get_conv_hull(hull_seed_points)
 
 # finishing up and writing points to the file
     for i in range(len(hull_seed_points)):
         hull_seed_points[i] = hull_seed_points[i].tolist()
-        
-    with open(name_points, 'wb') as f:
-        pickle.dump(hull_seed_points, f, protocol=2)
-    with open(name_hull, 'wb') as f:
-        pickle.dump(faces, f, protocol=2)
-
 
     # return them for plotting purpose
     return hull_seed_points, hull, vor
 
 
 def b_voronoi(n_towers = 20):
+
+    name_points = 'polygon1.csv'
 
     v_seed_points = np.random.rand(n_towers, 3) - 0.5
 
@@ -176,10 +171,17 @@ def b_voronoi(n_towers = 20):
     vor = generateBoundedVor(v_seed_points, bounding_box) 
     hull_seed_points, hull, vor = handle_bad_mesh_geo(vor, bounding_box)
 
-    convex_hull.plot_hull(hull_seed_points, hull, plotIndex=[3])
+    unique_edge_list, face_index_list = del_useless_edges(vor, hull)
 
+    with open(name_points, 'wb') as f:
+        pickle.dump([hull_seed_points, unique_edge_list, face_index_list], f, protocol=2)
+
+
+    # plot_hull(hull_seed_points, hull, plotIndex=[3])
+    
     print('created ' + str(len(vor.regions)) + ' polygons')
-    # convex_hull.plot_hull(points, hull)
+
+    # plot_hull(points, hull)
 
 def centroid_regionBackup(vertices):
     # Polygon's signed area
