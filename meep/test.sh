@@ -1,5 +1,1 @@
-if [ $1 = fuck ]; then
-    echo "$1 is eq than $2!"
-else 
-    echo "not fuck"
-fi
+python main.py 1.0 meep_out/voronoi.bin &

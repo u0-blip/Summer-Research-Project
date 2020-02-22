@@ -13,6 +13,14 @@ from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting
 
 from gen_geo import bounded_voronoi
 from gen_geo import convex_hull
+from gen_geo.geo_classes import *
+
+
+size_cell = [2, 2, 2]
+size_solid = [0.5, 0.5, 0.5]
+size_crystal_base = [0.1, 0.1, 0.1]
+num_crystal = 200
+air = mp.Medium(epsilon=1.0)
 
 def closest_node(node, nodes):
     # nodes = np.asarray(nodes)
@@ -26,12 +34,17 @@ def my_mat(coord):
     else:
         return mp.Medium(epsilon=1)
 
-def my_eps(coord):
+def pass_vor(func, vor):
+    def wrapper(*args, **kwargs):
+        return func(vor, *args, **kwargs)
+    return wrapper
+
+def my_eps(my_vor, coord):
     acoord = np.abs(coord)
     if (acoord[0] < 0.5 and acoord[1] < 0.5 and acoord[2] < 0.5 ):
-        return my_checker_geo.parts_eps[closest_node([coord[0],coord[1],coord[2]], my_checker_geo.points)]
+        return my_vor.parts_eps[closest_node([coord[0],coord[1],coord[2]], my_vor.points)]
     else:
-        return 1.0
+        return air
 
 def index2coord(index, size_arr, size_geo):
     index = (index/size_arr - 0.5)*size_geo
@@ -51,51 +64,6 @@ def write_windows(arr, file_name):
     with open(file_name, 'wb') as f:
         arr.transpose().astype('<f8').tofile(f)
 
-
-class voronoi_geo:
-    num_mat = 2
-    eps_mat = [1, 10]
-
-    def __init__(self, num_seeds, rand_seed = 15):
-        self.num_seeds = num_seeds
-        self.random_ass(rand_seed)
-        self.points = np.zeros((self.num_seeds, 3))
-        self.random_ass(rand_seed)
-        self.vor = Voronoi(self.points)
-        self.vertices = self.vor.vertices
-        
-
-    def random_ass(self, seed):
-        np.random.seed(seed)
-        self.points = np.random.rand(self.num_seeds, 3) - 0.5
-        self.parts_ass = np.random.randint(0, self.num_mat, (self.num_seeds))
-        self.parts_eps = [self.eps_mat[self.parts_ass[i]] for i in range(self.num_seeds)]
-
-class checker_geo:
-    num_div = 10
-    num_seed = num_div**3
-    points = np.zeros((num_div**3, 3))
-
-    p_range = np.array([1.0, 1.0, 1.0])
-    
-    num_parts = 2
-    eps_val = [1, 10]
-
-    def __init__(self):
-        self.checker_pattern()
-
-    def checker_pattern(self):
-        for i in range(self.num_div):
-            for j in range(self.num_div):
-                for k in range(self.num_div):
-                    index = np.array([i,j,k])
-                    self.points[index, :] = index2coord(index, np.array([self.num_div, self.num_div, self.num_div]), self.p_range)
-        # this will produce checker pattern
-        self.parts_ass = np.array([1 if i%2 else 0 for i in range(self.num_seed)])
-        self.parts_eps = [self.eps_val[self.parts_ass[i]] for i in range(self.num_seed)]
-
-my_voronoi_geo = voronoi_geo(100, 15)
-my_checker_geo = checker_geo()
 
 def gen_part_size(num_crystal, size_crystal_base, weibull = True):
     a = 5. # shape of weibull distribution
@@ -207,29 +175,98 @@ def out_num_geo(file_name, geo_data_obj, range_geo=None, range_index = None):
     print('file ' + file_name+' shape: ')
     print(out_geo.shape)
 
+def static_vars(**kwargs):
+    def decorate(func):
+        for k in kwargs:
+            setattr(func, k, kwargs[k])
+        return func
+    return decorate
+
 def get_sim_output(f_name, sim, length_t=20, out_every=0.6, get_3_field = False):
     if get_3_field:
-        one_cube_3d = [[] for i in range(3)]
-
+        result = [[] for i in range(3)]
+        @static_vars(counter=0)
         def f(sim):
-            one_cube_3d[0].append(sim.get_efield_x()) 
-            one_cube_3d[1].append(sim.get_efield_y())  
-            one_cube_3d[2].append(sim.get_efield_z())   
+            result[0].append(sim.get_efield_x()) 
+            result[1].append(sim.get_efield_y())  
+            result[2].append(sim.get_efield_z())   
+            f.counter += 1
+            if f.counter%5 == 0:
+                arr = np.array(result)
+                write_windows(arr, f_name)
+                write_windows(arr.shape, f_name+'.meta')
     else:
-        one_cube_3d = []
-
+        result = []
+        @static_vars(counter=0)
         def f(sim):
-            one_cube_3d.append(sim.get_efield_z())
+            result.append(sim.get_efield_z())
+            f.counter += 1
+            if f.counter%5 == 0:
+                arr = np.array(result)
+                write_windows(arr, f_name)
+                write_windows(arr.shape, f_name+'.meta')
 
     sim.run(mp.at_every(out_every, f), until=length_t)
 
-    one_cube_3d = np.array(one_cube_3d)
+    result = np.array(result)
 
-    write_windows(one_cube_3d, f_name)
-    write_windows(one_cube_3d.shape, f_name+'.meta')
+    write_windows(result, f_name)
+    write_windows(result.shape, f_name+'.meta')
 
-    print(one_cube_3d.shape)
-    return one_cube_3d
+    print('The output shape of the result matrix is: ' + str(result.shape))
+    return result
 
 def write_geo_for_field(vertices):
     raise Exception('unimplemented')
+
+
+
+def index2coord(index, size_arr, size_geo):
+    index = (index/size_arr - 0.5)*size_geo
+    return index
+
+
+def create_sim(mode, arg, vor, res = 50):
+    pml_layers = [mp.PML(0.3)]
+
+    my_voronoi_geo = voronoi_geo(100, vor = vor)
+    # my_checker_geo = checker_geo()
+
+    source_pad = 0.25
+    source = [mp.Source(mp.ContinuousSource(wavelength=2*(11**0.5), width=20),
+                    component= mp.Ez,
+                    center=mp.Vector3(0.55, 0, 0),
+                    size=mp.Vector3(0, 0.1, 0.1))]
+
+    # gen_polygon_data()
+    print(pass_vor(arg, my_voronoi_geo)((0.5, 0.5, 0.5)))
+    if mode == 'geo':
+        sim = mp.Simulation(resolution=res,
+                    cell_size=size_cell,
+                    boundary_layers=pml_layers,
+                    sources = source,
+                    geometry=arg,
+                    default_material=mp.Medium(epsilon=7.1))
+    elif mode == 'eps':
+        sim = mp.Simulation(resolution=res,
+            cell_size=size_cell,
+            boundary_layers=pml_layers,
+            sources = source,
+            material_function=pass_vor(arg, my_voronoi_geo))
+    else:
+        raise Exception('One of the option must be specified')
+    # vis(sim)
+    return sim
+
+
+def create_simple_geo(dist):
+    solid_region1 = mp.Block(size_solid, 
+                        center = mp.Vector3(dist/2. + 0.25, 0., 0.),
+                        material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4))
+
+    solid_region2 = mp.Block(size_solid, 
+                        center = mp.Vector3(-dist/2 - 0.25,  0., 0.),
+                        material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4))
+
+    geometry = [solid_region1, solid_region2]
+    return geometry

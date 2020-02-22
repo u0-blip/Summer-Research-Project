@@ -25,15 +25,15 @@ c23456789 (This demonstrates column position!)
       real coord_conv(3)
       integer m,n,l
       parameter (m=100, n=100, l =100)
-      real, save :: data_out(100, 100, 100)
+      real, save :: data_out(33, 100, 100, 100)
       integer, save:: r_file = 1
       integer, save:: counter = 1
       real t
       counter = counter  + 1
 
       if (r_file == 1) then
-            open (unit=1,  file='C:\peter_abaqus\Summer-Research-Project\abaqus_working_space\abaqus_out\voronoi.bin', 
-     &form='unformatted',  access='direct', recl=100*100*100)
+            open (unit=1,  file='C:\peter_abaqus\Summer-Research-Project\meep\meep_out\voronoi_120_t_20.bin', 
+     &form='unformatted',  access='direct', recl=33*100*100*100)
             read (1, rec=1) data_out
             close(1)
             print *, 'file is read'

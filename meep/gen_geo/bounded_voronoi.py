@@ -178,9 +178,12 @@ def b_voronoi(n_towers = 20):
 
     convex_hull.plot_hull(hull_seed_points, hull, plotIndex=[3])
 
-    print('created ' + str(len(vor.regions)) + ' polygons')
-    # convex_hull.plot_hull(points, hull)
 
+    print('created ' + str(len(vor.regions)) + ' polygons')
+    
+    # convex_hull.plot_hull(points, hull)
+    return vor
+    
 def centroid_regionBackup(vertices):
     # Polygon's signed area
     A = 0
