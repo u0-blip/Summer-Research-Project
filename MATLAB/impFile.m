@@ -1,4 +1,4 @@
-function whole_field = impFile(name)
+function [whole_field, space_dim] = impFile(name)
     dir = 'C:\peter_abaqus\Summer-Research-Project\meep\meep_out\';
     
     fid = fopen(strcat(dir, name, '.meta'),'r');

@@ -9,4 +9,6 @@ C:\SIMULIA\CAE\2019\win_b64\code\bin\ABQLauncher.exe -job checker_test5 -user df
 REM C:\SIMULIA\CAE\2019\win_b64\code\bin\ABQLauncher.exe -job umat_random -user umat_elastic
 REM run example_2 -job udfluxxx -user udfluxxx
 
+REM python main.py  0.1 meep_out/voronoi_120_t_400_res_50.bin
+
 REM shutil.copyfile('C:/temp/umat_test.inp', r'C:/peter_abaqus/Summer-Research-Project/abaqus_working_space/abaqus_out/umat_test.inp')

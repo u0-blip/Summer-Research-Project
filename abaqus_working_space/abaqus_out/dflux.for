@@ -9,15 +9,15 @@
       real x(3)
       integer m,n,l
       parameter (m=100, n=100, l =100)
-      double precision, save :: data_out(33, 100, 100, 100)
+      double precision, save :: data_out(133, 100, 100, 100)
       integer, save:: r_file = 1
       integer, save:: counter = 1
       real t
       counter = counter  + 1
 
       if (r_file == 1) then
-            open (unit=1,  file='C:\peter_abaqus\Summer-Research-Project\meep\meep_out\voronoi_120_t_20.bin', 
-     &form='unformatted',  access='direct', recl=33*100*100*100*2)
+            open (unit=1,  file='C:\peter_abaqus\Summer-Research-Project\meep\meep_out\voronoi_120_t_400_res_50_clean.bin', 
+     &form='unformatted',  access='direct', recl=133*100*100*100*2)
             read (1, rec=1) data_out
             close(1)
             print *, 'file is read'
@@ -30,7 +30,7 @@
     
       t = int(ceiling(time(1)*10))
 
-      FLUX(1)=data_out(t, int(x(1)), int(x(2)), int(x(3)))**2*10e-7
+      FLUX(1)=data_out(t, int(x(1)), int(x(2)), int(x(3)))*10e8
       
 c      ! if (mod(counter, 100) == 0) then
 c      !       print *, flux(1)

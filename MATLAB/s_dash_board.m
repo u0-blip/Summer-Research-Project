@@ -1,10 +1,12 @@
 %% importing the files
 dir = 'C:\peter_abaqus\Summer-Research-Project\meep\meep_out\';
 dist = 0.2;
-name = strcat('cube_dis_', sprintf('%.1f',dist), '.bin');
-name = 'voronoi_120_t_20.bin';
+plot_cube = 0;
 
-whole_field = impFile(name);
+name = strcat('cube_dis_', sprintf('%.1f',dist), '.bin');
+name = 'voronoi_120_t_20_res_50_f_1.5_rms_5.bin';
+
+[whole_field, space_dim] = impFile(name);
 
 whole_field_rms = squeeze(rms(whole_field));
 
@@ -29,11 +31,13 @@ cubes_yz = cubes(:, :, [2, 3]);
 range = space_dim(2);
 
 figure(1)
-    
+set(gcf,'color','w');
+
 roi = [0.1, 0.9];
 len_roi = roi(2) - roi(1);
 trans_roi = @(point, len_roi) ((point./cell_size + 1/2)/len_roi - (1/len_roi - 1)/2)*range*len_roi + 2;
 
+if plot_cube
 for i  = 1:size(cubes, 1)
     
     subplot(2, 2, 1)
@@ -41,10 +45,10 @@ for i  = 1:size(cubes, 1)
     [k1,~] = convhull(cube);
     for j = 1:length(k1)
         p = cube([int32(k1(j,:)), int32(k1(j, 1))], :);
-        plot3(trans_roi(p(:, 1), len_roi), trans_roi(p(:, 2), len_roi), trans_roi(p(:, 3), len_roi), 'r-')
+            plot3(trans_roi(p(:, 1), len_roi), trans_roi(p(:, 2), len_roi), trans_roi(p(:, 3), len_roi), 'r-')
         hold on
     end
-    
+end 
 %     subplot(2, 2, 2)
 %     
 %     [k1,av1] = convhull(cube);
@@ -75,7 +79,8 @@ end
 plot_whole_field_rms = whole_field_rms(plot_limit, plot_limit, plot_limit);
 
 subplot(2, 2, 1)
-h = slice(rid_val(time_slice), [], 1:size(time_slice,3), []);
+time_slice = rid_val(time_slice);
+h = slice(time_slice, [], 1:size(time_slice,3), []);
 xlabel('x')
 ylabel('y')
 zlabel('z')
@@ -101,6 +106,7 @@ for K = 2 : Q
     subplot(2, 2, 2)
     pc = pcolor(squeeze(time_slice(1:34, :, range/2)));
     set(pc, 'EdgeColor', 'none');
+    if plot_cube
     for i  = 1:size(cubes, 1)
         cube = squeeze(cubes(i, :, :));
         [k1,av1] = convhull(cube);
@@ -109,6 +115,7 @@ for K = 2 : Q
             plot(trans_roi(p(:, 1), len_roi), trans_roi(p(:, 2), len_roi), 'r-')
             hold on
         end
+    end
     end
     title('EM field distribution cut on xy plane')
     colorbar
@@ -119,10 +126,12 @@ for K = 2 : Q
     for i  = 1:size(cubes, 1)
         cube = squeeze(cubes(i, :, :));
         [k1,av1] = convhull(cube);
+        if plot_cube
         for j = 1:length(k1)
             p = cube([int32(k1(j,:)), int32(k1(j, 1))], :);
             plot(trans_roi(p(:, 1), len_roi), trans_roi(p(:, 2), len_roi), 'r-')
             hold on
+        end
         end
     end
     title('EM field distribution cut of xz plane')
@@ -134,10 +143,12 @@ for K = 2 : Q
     for i  = 1:size(cubes, 1)
         cube = squeeze(cubes(i, :, :));
         [k1,av1] = convhull(cube);
+        if plot_cube
         for j = 1:length(k1)
             p = cube([int32(k1(j,:)), int32(k1(j, 1))], :);
             plot(trans_roi(p(:, 1), len_roi), trans_roi(p(:, 2), len_roi), 'r-')
             hold on
+        end
         end
     end
     title('RMS EM field strength')
@@ -157,7 +168,7 @@ function out_arr = rid_val(in_arr)
     out_arr = in_arr;
     arr_abs = abs(in_arr);
     arr_mean = mean(mean(mean(arr_abs)));
-    out_arr(arr_abs < (arr_mean))=nan;
+    out_arr(arr_abs <= (arr_mean)/10.)=nan;
 end
 
 function moved = move_poly(poly, move_vec)

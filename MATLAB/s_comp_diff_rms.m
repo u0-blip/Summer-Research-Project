@@ -9,6 +9,7 @@ for i = 1:10
     
     arr_whole_field_rms(i, :, :, :) = squeeze(rms(whole_field));
 end
+space_dim = size(arr_whole_field_rms);
 % imshow(rescale(squeeze(whole_field(1,1,:,:))))
 
 %% 
@@ -28,6 +29,7 @@ len_roi = roi(2) - roi(1);
 trans_roi = @(point, len_roi) ((point./cell_size + 1/2)/len_roi - (1/len_roi - 1)/2)*range*len_roi + 2;
 
 plot_limit = roi(1)*range:roi(2)*range;
+set(gcf,'color','w');
 
 for j = 1:6
     subplot(2,3, j)

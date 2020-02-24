@@ -1,0 +1,4 @@
+fid = fopen(strcat(dir, name, '.meta'),'r');
+space_dim = fread(fid,'double','ieee-le');
+fclose(fid);
+'meep_out/test.bin'

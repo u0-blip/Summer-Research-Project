@@ -46,6 +46,13 @@ def my_eps(my_vor, coord):
     else:
         return air
 
+def my_ass(my_vor, coord):
+    acoord = np.abs(coord)
+    if (acoord[0] < 0.5 and acoord[1] < 0.5 and acoord[2] < 0.5 ):
+        return my_vor.parts_ass[closest_node([coord[0],coord[1],coord[2]], my_vor.points)]
+    else:
+        return -1
+
 def index2coord(index, size_arr, size_geo):
     index = (index/size_arr - 0.5)*size_geo
     return index
@@ -63,7 +70,13 @@ def write_windows(arr, file_name):
         arr = np.array(arr)
     with open(file_name, 'wb') as f:
         arr.transpose().astype('<f8').tofile(f)
+    with open(file_name + '.meta', 'wb') as f:
+        np.array(arr.shape).transpose().astype('<f8').tofile(f)
 
+def read_windows(file_name, shape = None):
+    if shape == None:
+        shape = np.flip(np.fromfile(file_name + '.meta', np.float).astype(np.int), axis=0)
+    return np.fromfile(file_name, np.float).reshape(shape).transpose()
 
 def gen_part_size(num_crystal, size_crystal_base, weibull = True):
     a = 5. # shape of weibull distribution
@@ -190,28 +203,27 @@ def get_sim_output(f_name, sim, length_t=20, out_every=0.6, get_3_field = False)
             result[0].append(sim.get_efield_x()) 
             result[1].append(sim.get_efield_y())  
             result[2].append(sim.get_efield_z())   
-            f.counter += 1
-            if f.counter%5 == 0:
-                arr = np.array(result)
-                write_windows(arr, f_name)
-                write_windows(arr.shape, f_name+'.meta')
+            # f.counter += 1
+            # if f.counter%5 == 0:
+            #     arr = np.array(result)
+            #     write_windows(arr, f_name+str(f.counter))
+            #     write_windows(arr.shape, f_name+str(f.counter)+'.meta')
     else:
         result = []
         @static_vars(counter=0)
         def f(sim):
             result.append(sim.get_efield_z())
-            f.counter += 1
-            if f.counter%5 == 0:
-                arr = np.array(result)
-                write_windows(arr, f_name)
-                write_windows(arr.shape, f_name+'.meta')
+            # f.counter += 1
+            # if f.counter%5 == 0:
+            #     arr = np.array(result)
+            #     write_windows(arr, f_name+str(f.counter))
+            #     write_windows(arr.shape, f_name+str(f.counter)+'.meta')
 
     sim.run(mp.at_every(out_every, f), until=length_t)
 
     result = np.array(result)
 
     write_windows(result, f_name)
-    write_windows(result.shape, f_name+'.meta')
 
     print('The output shape of the result matrix is: ' + str(result.shape))
     return result
@@ -226,10 +238,9 @@ def index2coord(index, size_arr, size_geo):
     return index
 
 
-def create_sim(mode, arg, vor, res = 50):
+def create_sim(mode, arg, my_voronoi_geo, res = 50):
     pml_layers = [mp.PML(0.3)]
 
-    my_voronoi_geo = voronoi_geo(100, vor = vor)
     # my_checker_geo = checker_geo()
 
     source_pad = 0.25
