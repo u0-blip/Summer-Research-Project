@@ -4,13 +4,37 @@ dist = 0.2;
 plot_cube = 0;
 
 name = strcat('cube_dis_', sprintf('%.1f',dist), '.bin');
-name = 'voronoi_120_t_20_res_50_f_1.5_rms_5.bin';
+name = 'voronoi_120_t_20_res_50_f_3.7_rms_5.bin';
 
 [whole_field, space_dim] = impFile(name);
 
 whole_field_rms = squeeze(rms(whole_field));
-
+whole_field_rms_single(4) = mean(mean(mean(whole_field_rms)));
 % imshow(rescale(squeeze(whole_field(1,1,:,:))))
+
+%%
+freq = [1.5, 2.26, 3, 3.7];
+res = [1.07487079014246e-06,5.41462462904420e-07,2.72407044060959e-07,1.43851082514600e-07];
+p = polyfit(freq, res, 2);
+
+x1 = linspace(1, 6, 20);
+% fitted_line = polyval(p,x1);
+
+g = 'exp1';
+f0 = fit(freq', res', g);
+
+set(gcf,'color','w');
+
+plot(freq, res, 'bo')
+hold on
+plot(x1, f0(x1))
+
+ax = gca;
+ax.TitleFontSizeMultiplier = 3;
+legend('data points', 'exp fitted line')
+title('frequency vs energy delivered')
+xlabel('Frequency (GHz)')
+ylabel('mean RMS value of E field strength')
 
 %%
 cube_size = 0.5;
@@ -27,7 +51,6 @@ cubes(2, :, :) = move_poly(cube_points, [dist/2 + cube_size/2, 0, 0]);
 
 cubes_xy = cubes(:,:,[1,2]);
 cubes_yz = cubes(:, :, [2, 3]);
-
 range = space_dim(2);
 
 figure(1)
@@ -151,8 +174,11 @@ for K = 2 : Q
         end
         end
     end
-    title('RMS EM field strength')
+    title('1.5Ghz')
+    ax = gca;
+    ax.TitleFontSizeMultiplier = 3;
     colorbar
+    caxis([0 3e-10])
     
 
     time_slice = rid_val(time_slice);

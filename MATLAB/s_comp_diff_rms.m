@@ -45,13 +45,17 @@ for j = 1:6
     for i  = 1:size(cubes, 1)
         cube = squeeze(cubes(i, :, :));
         [k1,av1] = convhull(cube);
-        for k = 1:length(k1)
-            p = cube([int32(k1(k,:)), int32(k1(k, 1))], :);
-            plot(trans_roi(p(:, 1), len_roi), trans_roi(p(:, 2), len_roi), 'r-')
-            hold on
-        end
+%         for k = 1:length(k1)
+%             p = cube([int32(k1(k,:)), int32(k1(k, 1))], :);
+%             plot(trans_roi(p(:, 1), len_roi), trans_roi(p(:, 2), len_roi), 'r-')
+%             hold on
+%         end
+        ran = [2,6,8,4,2];
+        plot(trans_roi(cube(ran, 1), len_roi), trans_roi(cube(ran, 2), len_roi), 'r-')
     end
-    title('RMS EM field strength for dist = ' + string(dist))
+    title('part dist = ' + string(dist))
+    ax = gca;
+    ax.TitleFontSizeMultiplier = 3;
     colorbar
     caxis([0 2.5e-5])
 end
