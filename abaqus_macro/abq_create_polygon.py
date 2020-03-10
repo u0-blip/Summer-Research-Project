@@ -48,6 +48,7 @@ def isCollinear(p0, p1, p2):
 		# print('wrong : ' + str(dist1) + ' ' + str(dist2))
 		return False
 
+
 data = []
 convexHull = []
 
@@ -60,55 +61,66 @@ with open(r'C:\\peter_abaqus\\Summer-Research-Project\\meep\\polygon1-hull.csv',
 
 parts_list = []
 
-for i in range(len(data)):
+data = [[[0,0,0],[0,0,1],[0,1,0],[0,1,1],[1,0,0],[1,0,1],[1,1,0],[1,1,1]]]
+convexHull = [[[7, 3, 1, 5], [7, 3, 2, 6], [5, 7, 6, 4], [5, 1, 0, 4], [4, 6, 2, 0], [1, 3, 2, 0]]]
+
+for i in range(1):
 	# create coordinate reference and supress
 	part_name = 'Part-'+str(i)
 	p = mdb.models['Model-1'].Part(name=part_name, dimensionality=THREE_D, type=DEFORMABLE_BODY)
-	p.ReferencePoint(point=(0.0, 0.0, 0.0))	
-	del p.features['RP']
+	# p.ReferencePoint(point=(0.0, 0.0, 0.0))	
+	# del p.features['RP']
 
 	for item in data[i]:
 		p.DatumPointByCoordinate(coords=(item[0], item[1], item[2]))
 		
+	
 	d1 = p.datums
 
 	# join datum for edges
 	for hull in convexHull[i]:
-		p.WirePolyLine(points=((d1[int(hull[0])+1], d1[int(hull[1])+1]),), mergeType=IMPRINT, meshable=ON)
-		p.WirePolyLine(points=((d1[int(hull[1])+1], d1[int(hull[2])+1]),), mergeType=IMPRINT, meshable=ON)
-		p.WirePolyLine(points=((d1[int(hull[2])+1], d1[int(hull[0])+1]),), mergeType=IMPRINT, meshable=ON)
+		for j in range(len(hull) - 1):
+			p.WirePolyLine(points=((d1[int(hull[j])+1], d1[int(hull[j+1])+1]),), mergeType=IMPRINT, meshable=ON)
+		p.WirePolyLine(points=((d1[int(hull[0])+1], d1[int(hull[-1])+1]),), mergeType=IMPRINT, meshable=ON)
+
+		eg = p.edges
+		for e in eg:
+			print(e)
+		print()
+		# seq = eg[len(eg) - len(hull):]
+		# p.CoverEdges(edgeList = seq, tryAnalytical=True)
 	
-	eg = p.edges
+# 	eg = p.edges
 
-	# create faces
-	for hull in convexHull[i]:
-		seq = []
-		wireSet = []
-		for edge in eg :
-			point = edge.pointOn[0]
-			if isCollinear(point, d1[int(hull[0])+1].pointOn,d1[int(hull[1])+1].pointOn):	
-				if 1 in wireSet:
-					continue
-				else:
-					seq.append(edge)
-					wireSet.append(1)
-			if isCollinear(point, d1[int(hull[1])+1].pointOn,d1[int(hull[2])+1].pointOn):
-				if 2 in wireSet:
-					continue
-				else:
-					seq.append(edge)
-					wireSet.append(2)
-			if isCollinear(point, d1[int(hull[2])+1].pointOn,d1[int(hull[0])+1].pointOn):
-				if 3 in wireSet:
-					continue
-				else:
-					seq.append(edge)
-					wireSet.append(3)
-			if len(seq) == 3:
-				p.CoverEdges(edgeList = seq, tryAnalytical=True)
-				break
+# 	# create faces
+# 	for hull in convexHull[i]:
+# 		seq = []
+# 		wireSet = []
+# 		for edge in eg :
+# 			point = edge.pointOn[0]
+# 			if isCollinear(point, d1[int(hull[0])+1].pointOn,d1[int(hull[1])+1].pointOn):	
+# 				if 1 in wireSet:
+# 					continue
+# 				else:
+# 					seq.append(edge)
+# 					wireSet.append(1)
+# 			if isCollinear(point, d1[int(hull[1])+1].pointOn,d1[int(hull[2])+1].pointOn):
+# 				if 2 in wireSet:
+# 					continue
+# 				else:
+# 					seq.append(edge)
+# 					wireSet.append(2)
+# 			if isCollinear(point, d1[int(hull[2])+1].pointOn,d1[int(hull[0])+1].pointOn):
+# 				if 3 in wireSet:
+# 					continue
+# 				else:
+# 					seq.append(edge)
+# 					wireSet.append(3)
+# 			if len(seq) == 3:
+# 				p.CoverEdges(edgeList = seq, tryAnalytical=True)
+# 				break
 
-	f = p.faces
-	p.AddCells(faceList = f)
+# 	f = p.faces
+# 	p.AddCells(faceList = f)
 
 # execfile('C:/peter_abaqus/Summer-Research-Project/abaqus_macro/abq_create_polygon.py', __main__.__dict__)

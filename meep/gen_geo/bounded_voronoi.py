@@ -131,9 +131,6 @@ def handle_bad_mesh_geo(vor, bounding_box):
     hull_seed_points = []
     hull = []
 
-    name_points = 'polygon1.csv'
-    name_hull = 'polygon1-hull.csv'
-
 # this is a do while loop
 
     hull_seed_points = [vor.vertices[region] for region in vor.regions]
@@ -146,38 +143,37 @@ def handle_bad_mesh_geo(vor, bounding_box):
 
     vor = generateBoundedVor(v_seed_points, bounding_box) 
     # print(vor.regions[0])
-    vor = del_points_too_close(vor)
+    # vor = del_points_too_close(vor)
     # print(vor.regions[0])
 
     # print(len(vor.regions))
     hull_seed_points = [vor.vertices[region] for region in vor.regions]
     hull, faces = convex_hull.get_conv_hull(hull_seed_points)
 
-# finishing up and writing points to the file
+    # finishing up and convert hull seed points to understandable format for Abaqus
     for i in range(len(hull_seed_points)):
         hull_seed_points[i] = hull_seed_points[i].tolist()
-        
-    with open(name_points, 'wb') as f:
-        pickle.dump(hull_seed_points, f, protocol=2)
-    with open(name_hull, 'wb') as f:
-        pickle.dump(faces, f, protocol=2)
-
 
     # return them for plotting purpose
-    return hull_seed_points, hull, vor
+    return hull_seed_points, faces, hull, vor
 
 
-def b_voronoi(n_towers = 20):
+def b_voronoi(seed_num=20):
+    name_points = 'polygon1.csv'
+    name_hull = 'polygon1-hull.csv'
 
-    v_seed_points = np.random.rand(n_towers, 3) - 0.5
+    v_seed_points = np.random.rand(seed_num, 3) - 0.5
 
     bounding_box = np.array([-0.5, 0.5, -0.5, 0.5, -0.5, 0.5]) # [x_min, x_max, y_min, y_max]
 
     vor = generateBoundedVor(v_seed_points, bounding_box) 
-    hull_seed_points, hull, vor = handle_bad_mesh_geo(vor, bounding_box)
+    hull_seed_points, faces, hull, vor = handle_bad_mesh_geo(vor, bounding_box)
 
-    convex_hull.plot_hull(hull_seed_points, hull, plotIndex=[3])
-
+    # convex_hull.plot_hull(hull_seed_points, hull, plotIndex=[3])
+    with open(name_points, 'wb') as f:
+        pickle.dump(hull_seed_points, f, protocol=2)
+    with open(name_hull, 'wb') as f:
+        pickle.dump(faces, f, protocol=2)
 
     print('created ' + str(len(vor.regions)) + ' polygons')
     
