@@ -4,7 +4,7 @@ dist = 0.2;
 plot_cube = 0;
 
 name = strcat('cube_dis_', sprintf('%.1f',dist), '.bin');
-name = 'voronoi_120_t_20_res_50_f_3.7_rms_5.bin';
+name = 'voronoi_120_t_400_res_50_rms_5.bin';
 
 [whole_field, space_dim] = impFile(name);
 
@@ -12,29 +12,7 @@ whole_field_rms = squeeze(rms(whole_field));
 whole_field_rms_single(4) = mean(mean(mean(whole_field_rms)));
 % imshow(rescale(squeeze(whole_field(1,1,:,:))))
 
-%%
-freq = [1.5, 2.26, 3, 3.7];
-res = [1.07487079014246e-06,5.41462462904420e-07,2.72407044060959e-07,1.43851082514600e-07];
-p = polyfit(freq, res, 2);
 
-x1 = linspace(1, 6, 20);
-% fitted_line = polyval(p,x1);
-
-g = 'exp1';
-f0 = fit(freq', res', g);
-
-set(gcf,'color','w');
-
-plot(freq, res, 'bo')
-hold on
-plot(x1, f0(x1))
-
-ax = gca;
-ax.TitleFontSizeMultiplier = 3;
-legend('data points', 'exp fitted line')
-title('frequency vs energy delivered')
-xlabel('Frequency (GHz)')
-ylabel('mean RMS value of E field strength')
 
 %%
 cube_size = 0.5;
@@ -174,11 +152,11 @@ for K = 2 : Q
         end
         end
     end
-    title('1.5Ghz')
+%     title('1.5Ghz')
     ax = gca;
-    ax.TitleFontSizeMultiplier = 3;
+%     ax.TitleFontSizeMultiplier = 3;
     colorbar
-    caxis([0 3e-10])
+%     caxis([0 3e-10])
     
 
     time_slice = rid_val(time_slice);
@@ -190,16 +168,3 @@ for K = 2 : Q
     pause(0.6);
 end
 
-function out_arr = rid_val(in_arr)
-    out_arr = in_arr;
-    arr_abs = abs(in_arr);
-    arr_mean = mean(mean(mean(arr_abs)));
-    out_arr(arr_abs <= (arr_mean)/10.)=nan;
-end
-
-function moved = move_poly(poly, move_vec)
-    for i  = 1:length(poly)
-        poly(i, :)= poly(i,:) + move_vec;
-    end
-    moved = poly;        
-end

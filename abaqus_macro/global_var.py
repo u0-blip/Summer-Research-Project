@@ -41,7 +41,7 @@ part_name_list = []
 a_cells = []
 b_cells = []
 
-assem_name = 'test_meep_output_file'
+assem_name = 'Model-1'
 
 model = mdb.models[assem_name]
 print('in global var file')

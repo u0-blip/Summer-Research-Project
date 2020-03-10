@@ -1,1 +1,5 @@
-python main.py 1.0 meep_out/voronoi.bin &
+#!/bin/bash
+for i in 1 2 3 4 5
+do
+    "Welcome $i times"
+done

@@ -1,0 +1,34 @@
+* particle shapes
+    sphere
+    polygon
+    
+the transient response can be discarded so that the steady state response can be studied
+The EM property will change according to the state the material is in. 
+Couple the EM field transient and steady state study with the change in the material physical property and compare it with the simulation that doesn't consider this phenomenum and show the divergence of these two simulation. 
+
+
+* according to the visualisation, the field requires at least 50 timestep to reach a steady state
+
+
+* need to expand the region so that the end effect doesn't become so obvious
+
+* fix the Abaqus simulation problems
+    The units are wrong
+    How can I tell I have fixed it?
+
+* Put the simulation in the metallic cavity
+
+* Add a view where there are two vertical view cut to the field centred around the center of the cube
+
+* figure out what frequency do
+
+* use the particle in the Abaqus thermal simulation
+    Need to construct the geometry generator
+
+* Fix geometry generator
+
+* SPF
+
+* Relationship between EM property and the temperature
+
+* couple thermal structure simulation with EM simulation
