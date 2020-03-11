@@ -101,7 +101,7 @@ def merge_shape(s1, s2):
     elif pos[1] == 2:
         s1.insert(pos[0] + 1, s2[1])
     else:
-        print(str(s1) + ' ' + str(s2))
+        # print(str(s1) + ' ' + str(s2))
         return False
     return s1
 
@@ -123,26 +123,19 @@ def co_plane(s1, s2, vertices):
     p2 = vertices[p2_i]
     p3 = vertices[p3_i]
     p = vertices[p_i]
-
     # These two vectors are in the plane
     v1 = p3 - p1
     v2 = p2 - p1
-
     # the cross product is a vector normal to the plane
     cp = np.cross(v1, v2)
     a, b, c = cp
-
     # This evaluates a * x3 + b * y3 + c * z3 which equals d
     d = -np.dot(cp, p3)
-
     # print('The equation is {0}x + {1}y + {2}z = {3}'.format(a, b, c, d))
-
     # equation of plane is: a*x + b*y + c*z = 0 # 
-      
     # checking if the 4th point satisfies 
     # the above equation 
-
-    print(abs(a * p[0] + b * p[1] + c * p[2] + d))
+    # print(abs(a * p[0] + b * p[1] + c * p[2] + d))
     if(abs(a * p[0] + b * p[1] + c * p[2] + d) <= 10* sys.float_info.epsilon): 
         # print("True")
         return True
@@ -153,7 +146,6 @@ def put_in_set(i, sets_list):
     in_sets = False
     for sets in sets_list:
         if i in sets:
-            sets.add(i)
             in_sets = True
     if not in_sets:
         sets_list.append({i})
@@ -163,19 +155,19 @@ def del_useless_edges(vor, hull):
     face_index_list = [[] for i in range(len(hull))]
 
 
-    for macro_i in range(1):
+    # for macro_i in range(68,69):
+    for macro_i in range(len(hull)):
         # i = 0
-
         # print(hull[0].simplices)
         hull_vertices = hull[macro_i].points
-
+        
         tri_shapes = hull[macro_i].simplices
         poly_shapes = []
 
         # plot_hull(hull_vertices, hull, plotIndex=[0])
 
         for i in range(len(tri_shapes)):
-            for j in range(i-1):
+            for j in range(i):
                 if co_plane(tri_shapes[i], tri_shapes[j], hull_vertices):
                     in_sets = False
                     for sets in poly_shapes:
@@ -186,11 +178,26 @@ def del_useless_edges(vor, hull):
                             break
                     if not in_sets:
                         poly_shapes.append({i, j})
-                else:
-                    put_in_set(i, poly_shapes)
-                    put_in_set(j, poly_shapes)
+                    # for k, sets in enumerate(poly_shapes):
+                    #     if i in sets or j in sets and len(sets) == 1:
+                    #         print('pop k')
+                    #         poly_shapes.pop(k)
+                # else:
+                #     put_in_set(i, poly_shapes)
+                #     put_in_set(j, poly_shapes)
+        mark_for_del = []
+        for i in range(len(poly_shapes)):
+            for j in range(i):
+                if len(poly_shapes[i].intersection(poly_shapes[j])) is not 0:
+                    poly_shapes[i] = poly_shapes[i].union(poly_shapes[j])
+                    mark_for_del.append(j)
+        for delete in sorted(mark_for_del, reverse = True):
+            poly_shapes.pop(delete)
 
-        print('poly_shape ' + str(macro_i) + ': ' + str(poly_shapes))
+        for i in range(len(tri_shapes)):
+            put_in_set(i, poly_shapes)
+
+        # print('poly_shape ' + str(macro_i) + ': ' + str(poly_shapes))
 
         merge_to_shape = [tri_shapes[sets.pop()] for sets in poly_shapes]
         
@@ -205,7 +212,7 @@ def del_useless_edges(vor, hull):
                     tri_shapes[tri_left.pop(index_to_pop)]
                 )
             # merge_to_shape[i] = np.array(vor.regions[macro_i])[merge_to_shape[i]].tolist()
-            merge_to_shape[i] = merge_to_shape[i]
+            merge_to_shape[i] = np.array(merge_to_shape[i]).tolist()
         face_edge_list = []
         for i, shapes in enumerate(merge_to_shape):
             face_edge_list.append([])
@@ -223,35 +230,30 @@ def del_useless_edges(vor, hull):
                         face_index_list[macro_i][i].append(k) #= np.where(unique_edge_list[macro_i] == edge)[0]
                         break
                     
-        print('merge to shape' + str(merge_to_shape))
-        print('face index list' + str(face_index_list))
-        print('unique edge list' + str(unique_edge_list))
-        # print(unique_edge_list[macro_i])
-        # print(merge_to_shape)
-
-        # for i_tri, tri in enumerate(tri_shapes):
-        #     for edge in get_edges(tri):
-        #         for i_other_tri in range(i_tri):
-        #             for other_edge in get_edges(tri_shapes[i_other_tri]):
-        #                 if (edge == other_edge).all():
-        #                     np.delete(tri_shapes, i_other_tri, 0)
-        #                     print('found: ' + str(edge))
-        #                     break
-
-        # tri_shapes = np.concatenate((tri_shapes, np.expand_dims(tri_shapes[:,0], 1)), axis=1)
-        # print(tri_shapes)
+        # print('merge to shape' + str(merge_to_shape))
+        # print('face index list' + str(face_index_list[macro_i]))
+        # print('unique edge list' + str(unique_edge_list[macro_i]))
 
     return unique_edge_list, face_index_list
 
 if __name__ == "__main__":
-    points = np.random.rand(30, 2)   # 30 random points in 2-D
-    hull = ConvexHull(points)
+    # points = np.random.rand(30, 2)   # 30 random points in 2-D
+    # hull = ConvexHull(points)
 
-    import matplotlib.pyplot as plt
-    plt.plot(points[:,0], points[:,1], 'o')
-    for simplex in hull.simplices:
-        plt.plot(points[simplex, 0], points[simplex, 1], 'k-')
+    # import matplotlib.pyplot as plt
+    # plt.plot(points[:,0], points[:,1], 'o')
+    # for simplex in hull.simplices:
+    #     plt.plot(points[simplex, 0], points[simplex, 1], 'k-')
 
-    plt.plot(points[hull.vertices,0], points[hull.vertices,1], 'r--', lw=2)
-    plt.plot(points[hull.vertices[0],0], points[hull.vertices[0],1], 'ro')
-    plt.show()
+    # plt.plot(points[hull.vertices,0], points[hull.vertices,1], 'r--', lw=2)
+    # plt.plot(points[hull.vertices[0],0], points[hull.vertices[0],1], 'ro')
+    # plt.show()
+    # points = np.array([[1, 1, -2],[3.5, 1.5, -11.5],[5, 5, -30], [3, 4.5, -22]])
+
+
+    # points = np.array([[0.00820046851664,0.0857238532724,-0.0210645300889], [0.109327384468, 0.229168345257, 0.100517249346], [-0.21736658251, 0.0628641540209, -0.0509073122494], [0.0489275187761, 0.287231837685, 0.144667047312], [-0.439516382443, 0.276741226475, 0.111735276199]])
+    # co_plane([0, 2, 3], [4, 2, 3], points)
+    # result = 2.454633718507182e-16
+
+    print(merge_shape([1, 0, 7], [0, 7, 9]))
+    pass

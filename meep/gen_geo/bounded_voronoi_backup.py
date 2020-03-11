@@ -97,7 +97,7 @@ def del_points_too_close(vor):
     # merge points doesn't actually work because the geometry will have empty regions
     merge_points = []
     for i in range(len(vor.vertices)):
-        for j in range(i-1):
+        for j in range(i):
             dist = np.linalg.norm(vor.vertices[i] - vor.vertices[j])
             if dist < 0.05:
                 in_sets = False
@@ -123,7 +123,7 @@ def del_points_too_close(vor):
                     break
     return vor
 
-def handle_bad_mesh_geo(vor, bounding_box):
+def del_polygon_too_narrow(vor, bounding_box):
 
     # vor = generateBoundedVor(v_seed_points, bounding_box) 
 
@@ -174,7 +174,7 @@ def b_voronoi(n_towers = 20):
     bounding_box = np.array([-0.5, 0.5, -0.5, 0.5, -0.5, 0.5]) # [x_min, x_max, y_min, y_max]
 
     vor = generateBoundedVor(v_seed_points, bounding_box) 
-    hull_seed_points, hull, vor = handle_bad_mesh_geo(vor, bounding_box)
+    hull_seed_points, hull, vor = del_polygon_too_narrow(vor, bounding_box)
 
     convex_hull.plot_hull(hull_seed_points, hull, plotIndex=[3])
 

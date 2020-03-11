@@ -87,7 +87,7 @@ def del_bad_poly_ratio(vor, hull):
         dist = maxDist(vor.vertices[region, :])
         ratio = dist/(hull[i].volume**(1/3.))
         # print(ratio)
-        if ratio <= 2.5:
+        if ratio <= 2.2:
             seed_of_regions_to_keep.append(vor.points[i])
 
     # print('points is ')
@@ -98,9 +98,9 @@ def del_points_too_close(vor):
     # merge points doesn't actually work because the geometry will have empty regions
     merge_points = []
     for i in range(len(vor.vertices)):
-        for j in range(i-1):
+        for j in range(i):
             dist = np.linalg.norm(vor.vertices[i] - vor.vertices[j])
-            if dist < 0.05:
+            if dist < 5*10e-5:
                 in_sets = False
                 for sets in merge_points:
                     if i in sets or j in sets:
@@ -124,7 +124,7 @@ def del_points_too_close(vor):
                     break
     return vor
 
-def handle_bad_mesh_geo(vor, bounding_box):
+def del_polygon_too_narrow(vor, bounding_box):
 
     # vor = generateBoundedVor(v_seed_points, bounding_box) 
 
@@ -144,11 +144,7 @@ def handle_bad_mesh_geo(vor, bounding_box):
     # print(len(v_seed_points))
 
     vor = generateBoundedVor(v_seed_points, bounding_box) 
-    # print(vor.regions[0])
-    vor = del_points_too_close(vor)
-    # print(vor.regions[0])
-
-    # print(len(vor.regions))
+    
     hull_seed_points = [vor.vertices[region] for region in vor.regions]
     hull, faces = get_conv_hull(hull_seed_points)
 
@@ -158,31 +154,6 @@ def handle_bad_mesh_geo(vor, bounding_box):
 
     # return them for plotting purpose
     return hull_seed_points, hull, vor
-
-
-def b_voronoi(n_towers = 20):
-
-    name_points = 'polygon1.csv'
-
-    v_seed_points = np.random.rand(n_towers, 3) - 0.5
-
-    bounding_box = np.array([-0.5, 0.5, -0.5, 0.5, -0.5, 0.5]) # [x_min, x_max, y_min, y_max]
-
-    vor = generateBoundedVor(v_seed_points, bounding_box) 
-    hull_seed_points, hull, vor = handle_bad_mesh_geo(vor, bounding_box)
-
-    unique_edge_list, face_index_list = del_useless_edges(vor, hull)
-
-    with open(name_points, 'wb') as f:
-        pickle.dump([hull_seed_points, unique_edge_list, face_index_list], f, protocol=2)
-
-
-    # plot_hull(hull_seed_points, hull, plotIndex=[3])
-    
-    print('created ' + str(len(vor.regions)) + ' polygons')
-
-    # plot_hull(points, hull)
-
 def centroid_regionBackup(vertices):
     # Polygon's signed area
     A = 0
@@ -236,6 +207,34 @@ def plot_vor(vor_vertices, regions):
     # print(vor.filtered_regions)
 
     plt.show()
+
+
+def b_voronoi(n_towers = 20, seed = 15):
+
+    np.random.seed(seed)
+    file_name = 'Voronoi_' + str(n_towers) + '_seed_' +str(seed) + '.geo'
+
+    v_seed_points = np.random.rand(n_towers, 3) - 0.5
+
+    bounding_box = np.array([-0.5, 0.5, -0.5, 0.5, -0.5, 0.5]) # [x_min, x_max, y_min, y_max]
+
+    vor = generateBoundedVor(v_seed_points, bounding_box) 
+    hull_seed_points, hull, vor = del_polygon_too_narrow(vor, bounding_box)
+
+    # print(vor.regions[0])
+    # vor = del_points_too_close(vor)
+    # print(vor.regions[0])
+
+    unique_edge_list, face_index_list = del_useless_edges(vor, hull)
+
+    with open(file_name, 'wb') as f:
+        pickle.dump([hull_seed_points, unique_edge_list, face_index_list], f, protocol=2)
+
+    # plot_hull(hull_seed_points, hull, plotIndex=[3])
+    
+    print('created ' + str(len(vor.regions)) + ' polygons')
+
+    # plot_hull(points, hull)
 
 
 if __name__ == "__main__":

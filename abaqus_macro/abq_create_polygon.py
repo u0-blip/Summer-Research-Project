@@ -59,7 +59,7 @@ vertices, unique_edge_list, face_index_list = data
 
 parts_list = []
 
-for i in range(1):
+for i in range(len(vertices)):
 	# create coordinate reference and supress
 	part_name = 'Part-'+str(i)
 	p = mdb.models['Model-1'].Part(name=part_name, dimensionality=THREE_D, type=DEFORMABLE_BODY)
@@ -69,9 +69,9 @@ for i in range(1):
 		p.DatumPointByCoordinate(coords=(item[0], item[1], item[2]))
 		
 	d1 = p.datums
-	print(d1)
-	print(unique_edge_list[i])
-	print(face_index_list[i])
+	# print(d1)
+	# print(unique_edge_list[i])
+	# print(face_index_list[i])
 	# join datum for edges
 
 	edge_names = []
@@ -83,64 +83,34 @@ for i in range(1):
 
 	# print('face edge name list')
 	# print(face_edge_name_list)
-	print('edge list')
-	for e in p.edges:
-		print(e) 
+	# need to check whether the pointOn of the edges can actually uniquely identify the edges
+
+
 
 	pedges = p.edges
+	edge_pointOn = [None] * len(edge_names)
+
+
+	for edge_obj_in_part in pedges:
+		for edge_index in range(len(edge_names)):
+			if edge_obj_in_part.featureName == edge_names[edge_index]:
+				edge_pointOn[edge_index] = edge_obj_in_part.pointOn
+
+	# print(edge_pointOn)
+
 	for face in face_index_list[i]:
 		face_edge_obj = []
 		for edge_index in face:	
-			print(edge_index)
 			for edge_obj_in_part in pedges:
 				# print('feature name is: ' + edge_obj_in_part.featureName)
 				# print('edge name is: ' + edge_names[edge_index])
-				if edge_obj_in_part.featureName == edge_names[edge_index]:
+				if edge_obj_in_part.pointOn == edge_pointOn[edge_index]:
 					face_edge_obj.append(edge_obj_in_part)
-		
-		# face_edge_obj_list.append(edge_obj)
-		# print('face edge object')
-		# print(face_edge_obj)		
 
-		# 	a = p.WirePolyLine(points=((d1[int(face[0])+1], d1[int(face[1])+1]),), mergeType=IMPRINT, meshable=ON)
-		# b = p.WirePolyLine(points=((d1[int(face[1])+1], d1[int(face[2])+1]),), mergeType=IMPRINT, meshable=ON)
-		# c = p.WirePolyLine(points=((d1[int(face[2])+1], d1[int(face[0])+1]),), mergeType=IMPRINT, meshable=ON)
-		# print(a.name)
-		print('face edge: ' + str(face_edge_obj))
 		p.CoverEdges(edgeList = face_edge_obj, tryAnalytical=True)
 
-	# eg = p.edges
+	f = p.faces
+	p.AddCells(faceList = f)
 
-	# # create faces
-	# for hull in convexHull[i]:
-	# 	seq = []
-	# 	wireSet = []
-	# 	for edge in eg :
-	# 		print(edge.id)
-	# 		point = edge.pointOn[0]
-	# 		if isCollinear(point, d1[int(hull[0])+1].pointOn,d1[int(hull[1])+1].pointOn):	
-	# 			if 1 in wireSet:
-	# 				continue
-	# 			else:
-	# 				seq.append(edge)
-	# 				wireSet.append(1)
-	# 		if isCollinear(point, d1[int(hull[1])+1].pointOn,d1[int(hull[2])+1].pointOn):
-	# 			if 2 in wireSet:
-	# 				continue
-	# 			else:
-	# 				seq.append(edge)
-	# 				wireSet.append(2)
-	# 		if isCollinear(point, d1[int(hull[2])+1].pointOn,d1[int(hull[0])+1].pointOn):
-	# 			if 3 in wireSet:
-	# 				continue
-	# 			else:
-	# 				seq.append(edge)
-	# 				wireSet.append(3)
-	# 		if len(seq) == 3:
-	# 			p.CoverEdges(edgeList = seq, tryAnalytical=True)
-	# 			break
-
-	# f = p.faces
-	# p.AddCells(faceList = f)
-
+	# mdb.saveAs(pathName='C:/peter_abaqus/Summer-Research-Project/abaqus_working_space/voronoi_500')
 # execfile('C:/peter_abaqus/Summer-Research-Project/abaqus_macro/abq_create_polygon.py', __main__.__dict__)
