@@ -2,8 +2,6 @@ from meep_funcs import *
 from gen_geo.bounded_voronoi import *
 import sys
 
-np.random.seed(15)
-
 def index2coord(index, size_arr, size_geo):
     index = (index/size_arr - 0.5)*size_geo
     return index
@@ -53,7 +51,7 @@ def create_sim():
 
 
 if __name__ == "__main__":
-    b_voronoi(500, seed=15)
+    b_voronoi(n_towers = 10000, seed=15)
 
 # get_sim_output(str(sys.argv[2]), create_sim(), length_t = 40, out_every=0.6, get_3_field=False)
 # out_num_geo('checker_geo.bin', my_checker_geo, range_geo=[1.0,1.0,1.0], range_index=[100,100,100])

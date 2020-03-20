@@ -101,17 +101,20 @@ def merge_shape(s1, s2):
     elif pos[1] == 2:
         s1.insert(pos[0] + 1, s2[1])
     else:
-        # print(str(s1) + ' ' + str(s2))
+        # # print(str(s1) + ' ' + str(s2))
         return False
     return s1
+
+sameShape = lambda s1, s2: s1[0] in s2 and s1[1] in s2 and s1[2] in s2
 
 def co_plane(s1, s2, vertices):
     pos = boarder_shape(s1, s2)
     p1_i, p2_i, p3_i = s1[0], s1[1], s1[2]
 
+    
+
     if pos == [-1, -1]:
         return False
-
     if pos[1] == 0:
         p_i = s2[2]
     elif pos[1] == 1:
@@ -131,13 +134,13 @@ def co_plane(s1, s2, vertices):
     a, b, c = cp
     # This evaluates a * x3 + b * y3 + c * z3 which equals d
     d = -np.dot(cp, p3)
-    # print('The equation is {0}x + {1}y + {2}z = {3}'.format(a, b, c, d))
+    # # print('The equation is {0}x + {1}y + {2}z = {3}'.format(a, b, c, d))
     # equation of plane is: a*x + b*y + c*z = 0 # 
     # checking if the 4th point satisfies 
     # the above equation 
-    # print(abs(a * p[0] + b * p[1] + c * p[2] + d))
+    
+    
     if(abs(a * p[0] + b * p[1] + c * p[2] + d) <= 10* sys.float_info.epsilon): 
-        # print("True")
         return True
     else: 
         return False 
@@ -155,10 +158,10 @@ def del_useless_edges(vor, hull):
     face_index_list = [[] for i in range(len(hull))]
 
 
-    # for macro_i in range(68,69):
+    # for macro_i in range(353,354):
     for macro_i in range(len(hull)):
         # i = 0
-        # print(hull[0].simplices)
+        # # print(hull[0].simplices)
         hull_vertices = hull[macro_i].points
         
         tri_shapes = hull[macro_i].simplices
@@ -166,6 +169,7 @@ def del_useless_edges(vor, hull):
 
         # plot_hull(hull_vertices, hull, plotIndex=[0])
 
+        # print('tri shape ' + str(tri_shapes))
         for i in range(len(tri_shapes)):
             for j in range(i):
                 if co_plane(tri_shapes[i], tri_shapes[j], hull_vertices):
@@ -178,22 +182,59 @@ def del_useless_edges(vor, hull):
                             break
                     if not in_sets:
                         poly_shapes.append({i, j})
+                    # print(str([i,j]) + ' is added')
+                    # print(str(tri_shapes[i]) + ' ' + str(tri_shapes[j]))
+                    # print('poly shape now: ' + str(poly_shapes))
+                    # print()
                     # for k, sets in enumerate(poly_shapes):
                     #     if i in sets or j in sets and len(sets) == 1:
-                    #         print('pop k')
+                    #         # print('pop k')
                     #         poly_shapes.pop(k)
                 # else:
                 #     put_in_set(i, poly_shapes)
                 #     put_in_set(j, poly_shapes)
         mark_for_del = []
+        mark_for_del_keep = []
+
         for i in range(len(poly_shapes)):
             for j in range(i):
                 if len(poly_shapes[i].intersection(poly_shapes[j])) is not 0:
-                    poly_shapes[i] = poly_shapes[i].union(poly_shapes[j])
-                    mark_for_del.append(j)
-        for delete in sorted(mark_for_del, reverse = True):
-            poly_shapes.pop(delete)
+                    in_sets = False
+                    for sets in mark_for_del:
+                        if i in sets or j in sets:
+                            sets.add(i)
+                            sets.add(j)
+                            in_sets = True
+                            break
+                    if not in_sets:
+                        mark_for_del.append({i, j})
 
+        for delete in mark_for_del:
+            mark_for_del_keep.append(delete.pop())
+            
+        # print('mark for delete ' + str(mark_for_del))
+        # print('mark for delete keep ' + str(mark_for_del_keep))
+        # for i in range(len(mark_for_del)):
+        #     mark_for_del[i] = mark_for_del[i].tolist()
+
+        for i, delete_set in enumerate(mark_for_del):
+            for delete in sorted(list(delete_set), reverse = True):
+                poly_shapes[mark_for_del_keep[i]] = poly_shapes[mark_for_del_keep[i]].union(poly_shapes[delete])
+        poly_shapes_kept = []
+
+        delete_list = []
+        for i in range(len(mark_for_del)):
+            delete_list += list(mark_for_del[i])
+
+        # get a list of not kept list
+        for i in range(len(poly_shapes)):
+            if i not in delete_list:
+                poly_shapes_kept.append(poly_shapes[i])
+                
+        poly_shapes = poly_shapes_kept
+        # print('poly shape now: ' + str(poly_shapes))
+
+        # put the rest of triangular shape into the sets
         for i in range(len(tri_shapes)):
             put_in_set(i, poly_shapes)
 
@@ -255,5 +296,5 @@ if __name__ == "__main__":
     # co_plane([0, 2, 3], [4, 2, 3], points)
     # result = 2.454633718507182e-16
 
-    print(merge_shape([1, 0, 7], [0, 7, 9]))
+    # print(merge_shape([1, 0, 7], [0, 7, 9]))
     pass
