@@ -72,3 +72,5 @@ fortran_read/out_small.peter
 *.bin
 *.h5
 *.meta
+voronoi*.cae
+*.bdf

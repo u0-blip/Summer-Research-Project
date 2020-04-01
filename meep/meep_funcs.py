@@ -17,7 +17,6 @@ from gen_geo.geo_classes import *
 
 
 size_cell = [2, 2, 2]
-size_solid = [0.5, 0.5, 0.5]
 size_crystal_base = [0.1, 0.1, 0.1]
 num_crystal = 200
 air = mp.Medium(epsilon=1.0)
@@ -244,10 +243,12 @@ def create_sim(mode, geo, my_voronoi_geo, res = 50):
     # my_checker_geo = checker_geo()
 
     source_pad = 0.25
-    source = [mp.Source(mp.ContinuousSource(wavelength=2*(11**0.5), width=20),
+    source = [
+        mp.Source(mp.ContinuousSource(wavelength=2*(11**0.5), width=20),
                     component= mp.Ez,
                     center=mp.Vector3(0.55, 0, 0),
-                    size=mp.Vector3(0, 0.1, 0.1))]
+                    size=mp.Vector3(0, 0.1, 0.1))
+                    ]
 
     # gen_polygon_data()
     # print(pass_vor(geo, my_voronoi_geo)((0.5, 0.5, 0.5)))
@@ -270,14 +271,43 @@ def create_sim(mode, geo, my_voronoi_geo, res = 50):
     return sim
 
 
-def create_simple_geo(dist):
-    solid_region1 = mp.Block(size_solid, 
-                        center = mp.Vector3(dist/2. + 0.25, 0., 0.),
-                        material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4))
-
-    solid_region2 = mp.Block(size_solid, 
-                        center = mp.Vector3(-dist/2 - 0.25,  0., 0.),
-                        material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4))
-
-    geometry = [solid_region1, solid_region2]
+def create_simple_geo(coords, shape, size_solid, prism_height=0, prism_axis=(0,0,1)):
+    geometry = []
+    if shape == "cube":
+        for i,coord in enumerate(coords):
+            geometry.append(
+                mp.Block(
+                    size_solid, 
+                    center = coord,
+                    material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4)
+                    )
+            )
+    elif shape == "sphere":
+        for i,coord in enumerate(coords):
+            geometry.append(
+                mp.Sphere(
+                    radius = size_solid, 
+                    center = coord,
+                    material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4)
+                    )
+            )
+    if shape == "ellipsoid":
+        for i,coord in enumerate(coords):
+            geometry.append(
+                mp.Ellipsoid(
+                    size_solid, 
+                    center = coord,
+                    material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4)
+                    )
+            )
+    if shape == "prism":
+        for i, coord in enumerate(coords):
+            geometry.append(
+                mp.Prism(
+                    vertices = coord,
+                    height = prism_height, 
+                    axis = prism_axis,
+                    material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4)
+                    )
+            )
     return geometry

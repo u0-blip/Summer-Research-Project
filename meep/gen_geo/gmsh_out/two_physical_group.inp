@@ -1,0 +1,250 @@
+*********************************************************************
+** Abaqus/fromNastran Abaqus 3DEXPERIENCE R2019x
+**
+** reading bulk data from: C:\peter_abaqus\Summer-Research-Project\meep\gen_geo\gmsh_out\two_physical_group.bdf
+**  creating Abaqus input: C:\peter_abaqus\Summer-Research-Project\meep\gen_geo\gmsh_out\two_physical_group.inp
+** writing diagnostics to: C:\peter_abaqus\Summer-Research-Project\meep\gen_geo\gmsh_out\two_physical_group.log
+**
+**  environment variables: fromnastran_wtmass_fixup <not present>
+**                       : fromnastran_distribution <not present>
+**                       : fromnastran_pbar_zero_reset <not present>
+**                       : fromnastran_loadcases <not present>
+**                       : fromnastran_surface_based_coupling <not present>
+**                       : fromnastran_cquad4 <not present>
+**                       : fromnastran_chexa <not present>
+**                       : fromnastran_ctetra <not present>
+**                       : fromnastran_cbar <not present>
+**                       : fromnastran_beam_offset_coupling <not present>
+**                       : fromnastran_beam_orientation_vector <not present>
+**                       : fromnastran_shell_general_section <not present>
+**                       : fromnastran_eigensolver <not present>
+**                       : fromnastran_plotel <not present>
+**                       : fromnastran_cdh_weld <not present>
+**                       : fromnastran_spoint_dof <not present>
+**
+** command line arguments: wtmass_fixup=ON
+**                       : distribution=preservePID
+**                       : pbar_zero_reset=1e-20
+**                       : loadcases=ON
+**                       : surface_based_coupling=ON
+**                       : cquad4=S4R
+**                       : chexa=C3D8I
+**                       : ctetra=C3D10M
+**                       : cbar=B31
+**                       : beam_offset_coupling=ON
+**                       : beam_orientation_vector=ON
+**                       : shell_general_section=OFF
+**                       : plotel <not present>
+**                       : cdh_weld <not present>
+**                       : eigensolver <not present>
+**                       : spoint_dof <not present, using default=9>
+**
+** --------------------------------
+** Nastran Bulk Data processed:
+**      keyword   number
+** ------------   ------
+**         CBAR       32
+**       CTRIA3       88
+**      ENDDATA        1
+**         GRID       62
+**
+** environment_variable / command_line_argument summary:
+** PARAM,WTMASS will be used to adjust structural mass/density
+** *DISTRIBUTION will be used for shell offsets, orientations, and thicknesses
+**  shell elements will be grouped by PSHELL ID
+** Zero PBAR/PBEAM cross sectional parameters will be reset to 1e-20
+** Rigid links will be modeled using surface-based *COUPLING constraints
+** Beam orientations will be modeled using vectors on beam sections
+** Beam offsets will be modeled using rigid couplings and extra nodes
+** PSHELL/PCOMP will default to *SHELL SECTION
+** PLOTELs will not be translated
+** "CDH welds" (isolated CHEXAs with 8 RBE3s) will not be translated to
+**  rigid fasteners
+** CWELDs will be translated to compliant fasteners
+** CQUAD4 elements will be translated to S4R
+** SPOINT DOF 0 will be reset to 9 in DMIG, MPC, CELAS2, and CMASS2 data
+**
+** ---------------------------------------------------
+** ---- *NODE ----------------------------------------
+** ---------------------------------------------------
+**
+** following nodes were defined in the global coordinate system
+**
+*SYSTEM
+**
+*NODE, SYSTEM=R
+       1,          0.,          0.,          0.
+       2,          1.,          0.,          0.
+       3,          1.,          1.,          0.
+       4,          0.,          1.,          0.
+       5,          0.,          0.,          0.
+       6,         -1.,          0.,          0.
+       7,         -1.,         -1.,          0.
+       8,          0.,         -1.,          0.
+       9,        0.25,          0.,          0.
+      10,         0.5,          0.,          0.
+      11,        0.75,          0.,          0.
+      12,          1.,        0.25,          0.
+      13,          1.,         0.5,          0.
+      14,          1.,        0.75,          0.
+      15,        0.75,          1.,          0.
+      16,         0.5,          1.,          0.
+      17,        0.25,          1.,          0.
+      18,          0.,        0.75,          0.
+      19,          0.,         0.5,          0.
+      20,          0.,        0.25,          0.
+      21,       -0.25,          0.,          0.
+      22,        -0.5,          0.,          0.
+      23,       -0.75,          0.,          0.
+      24,         -1.,       -0.25,          0.
+      25,         -1.,        -0.5,          0.
+      26,         -1.,       -0.75,          0.
+      27,       -0.75,         -1.,          0.
+      28,        -0.5,         -1.,          0.
+      29,       -0.25,         -1.,          0.
+      30,          0.,       -0.75,          0.
+      31,          0.,        -0.5,          0.
+      32,          0.,       -0.25,          0.
+      33,       0.625,    0.783494,          0.
+      34,    0.635964,    0.204612,          0.
+      35,    0.211693,    0.376059,          0.
+      36,    0.211401,    0.624005,          0.
+      37,    0.433013,         0.5,          0.
+      38,    0.367071,    0.787414,          0.
+      39,    0.708273,    0.520344,          0.
+      40,    0.399005,    0.236576,          0.
+      41,    0.823151,    0.689686,          0.
+      42,     0.84471,       0.375,          0.
+      43,    0.183013,    0.816987,          0.
+      44,    0.183013,    0.183013,          0.
+      45,    0.825041,    0.178098,          0.
+      46,    0.588404,    0.383222,          0.
+      47,     0.85152,    0.854073,          0.
+      48,      -0.375,     -0.2165,          0.
+      49,    -0.36403,    -0.79538,          0.
+      50,     -0.7883,    -0.62394,          0.
+      51,    -0.78859,    -0.37599,          0.
+      52,    -0.56698,        -0.5,          0.
+      53,    -0.63292,    -0.21258,          0.
+      54,    -0.29172,    -0.47965,          0.
+      55,    -0.60099,    -0.76342,          0.
+      56,    -0.17684,    -0.31031,          0.
+      57,    -0.15529,      -0.625,          0.
+      58,    -0.81698,    -0.18301,          0.
+      59,    -0.81698,    -0.81698,          0.
+      60,    -0.17495,     -0.8219,          0.
+      61,    -0.41159,    -0.61677,          0.
+      62,    -0.14848,    -0.14592,          0.
+**
+*SECTION CONTROLS, NAME=REDUCED_INTEGRATION_FROMNASTRAN
+**
+** ---------------------------------------------------
+** ------ SHELL elements (missing PSHELL or MID) -----
+** ---------------------------------------------------
+**
+** DUMMY MATERIAL AND SECTION -=>
+*MATERIAL, NAME=MATERIAL_PSHELL_0
+*ELASTIC
+1., 0.
+**
+*SHELL SECTION, ELSET=PSHELL_0, MATERIAL=MATERIAL_PSHELL_0
+1.,
+**
+*ELEMENT, TYPE=S3R, ELSET=PSHELL_0
+**
+41, 37, 39, 33
+42, 33, 38, 37
+43, 37, 38, 36
+44, 35, 40, 37
+45, 13, 41, 39
+46, 40, 46, 37
+47, 39, 42, 13
+48, 16, 33, 15
+49, 19, 36, 18
+50, 20, 35, 19
+51, 35, 36, 19
+52, 35, 37, 36
+53, 11, 34, 10
+54, 14, 41, 13
+55, 42, 46, 34
+56, 17, 38, 16
+57, 10, 40, 9
+58, 16, 38, 33
+59, 34, 40, 10
+60, 37, 46, 39
+61, 39, 41, 33
+62, 4, 43, 17
+63, 18, 43, 4
+64, 1, 44, 20
+65, 9, 44, 1
+66, 2, 45, 11
+67, 12, 45, 2
+68, 34, 46, 40
+69, 34, 45, 42
+70, 33, 47, 15
+71, 39, 46, 42
+72, 40, 44, 9
+73, 17, 43, 38
+74, 13, 42, 12
+75, 11, 45, 34
+76, 36, 43, 18
+77, 20, 44, 35
+78, 41, 47, 33
+79, 3, 47, 14
+80, 15, 47, 3
+81, 35, 44, 40
+82, 38, 43, 36
+83, 42, 45, 12
+84, 14, 47, 41
+85, 52, 54, 48
+86, 48, 53, 52
+87, 52, 53, 51
+88, 50, 55, 52
+89, 31, 56, 54
+90, 55, 61, 52
+91, 54, 57, 31
+92, 22, 48, 21
+93, 25, 51, 24
+94, 50, 51, 25
+95, 29, 49, 28
+96, 50, 52, 51
+97, 26, 50, 25
+98, 32, 56, 31
+99, 57, 61, 49
+100, 28, 55, 27
+101, 23, 53, 22
+102, 22, 53, 48
+103, 49, 55, 28
+104, 52, 61, 54
+105, 54, 56, 48
+106, 6, 58, 23
+107, 24, 58, 6
+108, 7, 59, 26
+109, 27, 59, 7
+110, 8, 60, 29
+111, 30, 60, 8
+112, 49, 61, 55
+113, 49, 60, 57
+114, 48, 62, 21
+115, 54, 61, 57
+116, 23, 58, 53
+117, 55, 59, 27
+118, 31, 57, 30
+119, 29, 60, 49
+120, 51, 58, 24
+121, 26, 59, 50
+122, 56, 62, 48
+123, 21, 62, 5
+124, 5, 62, 32
+125, 50, 59, 55
+126, 53, 58, 51
+127, 57, 60, 30
+128, 32, 62, 56
+**
+** elset ALL_MASSIVE_ELEMENTS contains all 88 elements that can have mass
+*ELSET, ELSET=ALL_MASSIVE_ELEMENTS
+PSHELL_0,
+*STEP
+WARNING: did not find "SOL=" in Nastran file
+*STATIC
+*END STEP

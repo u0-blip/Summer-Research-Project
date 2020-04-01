@@ -24,16 +24,16 @@ c23456789 (This demonstrates column position!)
       
       real coord_conv(3)
       integer m,n,l
-      parameter (m=100, n=100, l =100)
-      real, save :: data_out(33, 100, 100, 100)
+      parameter (m=150, n=150, l =150)
+      double precision, save :: data_out(33, m, n, l)
       integer, save:: r_file = 1
       integer, save:: counter = 1
       real t
       counter = counter  + 1
 
       if (r_file == 1) then
-            open (unit=1,  file='C:\peter_abaqus\Summer-Research-Project\meep\meep_out\voronoi_120_t_20.bin', 
-     &form='unformatted',  access='direct', recl=33*100*100*100)
+            open (unit=1,  file='C:\peter_abaqus\Summer-Research-Project\meep\meep_out\prism_dis_0.2.bin', 
+     &form='unformatted',  access='direct', recl=33*m*n*l*2)
             read (1, rec=1) data_out
             close(1)
             print *, 'file is read'
@@ -50,10 +50,15 @@ c23456789 (This demonstrates column position!)
       
 c use code to define DDSDDE, STRESS, STATEV, SSE, SPD, SCD, and if necessary, RPL, DDSDDT, DRPLDE, DRPLDT, PNEWDT
 
-      STATEV(1) = data_out(int(coord_conv(1)), int(coord_conv(2)), int(coord_conv(3)))
-      if(STATEV(1) == 10)
-            E = 299
       
+      coord_conv(1) = ceiling((coords(1)+0.5)*m)
+      coord_conv(2) = ceiling((coords(2)+0.5)*n)
+      coord_conv(3) = ceiling((coords(3)+0.5)*l)
+
+      STATEV(1) = data_out(15, int(coord_conv(1)), int(coord_conv(2)), int(coord_conv(3)))
+      ! print*, int(coord_conv(1)), int(coord_conv(2)), int(coord_conv(3))
+      print*, statev(1)
+
       E = props(1) + z*sigma
       ANU = props(2)
       ALAMDA = E*ANU/(1+ANU)/(ONE - TWO*ANU)
@@ -82,9 +87,6 @@ c use code to define DDSDDE, STRESS, STATEV, SSE, SPD, SCD, and if necessary, RP
          end do
       end do
 
-      do i =1,3
-            coord_conv(i) = ceiling((coords(i)+0.5)*100.0)
-      end do
     
 c      ! t = int(ceiling(time(1)*10))
 

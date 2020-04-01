@@ -1,0 +1,9 @@
+Things to do this week:
+1. Look into Gmsh
+    a. If Gmsh is compatible with Abaqus
+2. Investigate microwave lights
+3. Create simple full chain simulation
+4. Create complex full chain simulation
+5. Incorporate co-simulation with MEEP and Abaqus
+
+Can also model the interaction between the cutting blade and the heated rock. Which requires the knowledge of metal component modeling. 

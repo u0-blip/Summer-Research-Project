@@ -33,7 +33,7 @@ import shutil
 import unicodedata
 
 # working_dir = r'//ad.monash.edu/home/User045/dche145/Documents/Abaqus/microwave-break-rocks/'
-working_dir = r'C:/peter_abaqus/Summer-Research-Project/'
+working_dir = r'C:/peter_abaqus/Summer-Research-Project/abaqus_macro'
 
 sys.path.append(working_dir)
 # os.chdir(working_dir)
@@ -46,7 +46,9 @@ import global_var
 reload(global_var)
 from global_var import *
 
-
+import mat_prop
+reload(mat_prop)
+from mat_prop import *
 
 
 def create_material_section():
@@ -74,11 +76,11 @@ def create_material_section():
     #     thickness=None)
 
 if __name__== "__main__":
-    create_material()
+    create_material_section()
 
 
 # TeamViewer
-# execfile('C:/peter_abaqus/Summer-Research-Project/create_material.py', __main__.__dict__)
+# execfile('C:/peter_abaqus/Summer-Research-Project/abaqus_macro/create_material.py', __main__.__dict__)
 # shutil.copyfile('C:/Users/dche145/abaqusMacros.py', r'//ad.monash.edu/home/User045/dche145/Documents/Abaqus/microwave-break-rocks/macro.py')
 # os.chdir(r"C:\peter_abaqus\Summer-Research-Project")
 
