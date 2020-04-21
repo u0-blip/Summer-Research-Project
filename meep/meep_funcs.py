@@ -16,7 +16,6 @@ from gen_geo import convex_hull
 from gen_geo.geo_classes import *
 
 
-size_cell = [2, 2, 2]
 size_crystal_base = [0.1, 0.1, 0.1]
 num_crystal = 200
 air = mp.Medium(epsilon=1.0)
@@ -194,38 +193,6 @@ def static_vars(**kwargs):
         return func
     return decorate
 
-def get_sim_output(f_name, sim, length_t=20, out_every=0.6, get_3_field = False):
-    if get_3_field:
-        result = [[] for i in range(3)]
-        @static_vars(counter=0)
-        def f(sim):
-            result[0].append(sim.get_efield_x()) 
-            result[1].append(sim.get_efield_y())  
-            result[2].append(sim.get_efield_z())   
-            # f.counter += 1
-            # if f.counter%5 == 0:
-            #     arr = np.array(result)
-            #     write_windows(arr, f_name+str(f.counter))
-            #     write_windows(arr.shape, f_name+str(f.counter)+'.meta')
-    else:
-        result = []
-        @static_vars(counter=0)
-        def f(sim):
-            result.append(sim.get_efield_z())
-            # f.counter += 1
-            # if f.counter%5 == 0:
-            #     arr = np.array(result)
-            #     write_windows(arr, f_name+str(f.counter))
-            #     write_windows(arr.shape, f_name+str(f.counter)+'.meta')
-
-    sim.run(mp.at_every(out_every, f), until=length_t)
-
-    result = np.array(result)
-
-    write_windows(result, f_name)
-
-    print('The output shape of the result matrix is: ' + str(result.shape))
-    return result
 
 def write_geo_for_field(vertices):
     raise Exception('unimplemented')
@@ -237,42 +204,9 @@ def index2coord(index, size_arr, size_geo):
     return index
 
 
-def create_sim(mode, geo, my_voronoi_geo, res = 50):
-    pml_layers = [mp.PML(0.3)]
-
-    # my_checker_geo = checker_geo()
-
-    source_pad = 0.25
-    source = [
-        mp.Source(mp.ContinuousSource(wavelength=2*(11**0.5), width=20),
-                    component= mp.Ez,
-                    center=mp.Vector3(0.55, 0, 0),
-                    size=mp.Vector3(0, 0.1, 0.1))
-                    ]
-
-    # gen_polygon_data()
-    # print(pass_vor(geo, my_voronoi_geo)((0.5, 0.5, 0.5)))
-    if mode == 'geo':
-        sim = mp.Simulation(resolution=res,
-                    cell_size=size_cell,
-                    boundary_layers=pml_layers,
-                    sources = source,
-                    geometry=geo,
-                    default_material=mp.Medium(epsilon=7.1))
-    elif mode == 'eps':
-        sim = mp.Simulation(resolution=res,
-            cell_size=size_cell,
-            boundary_layers=pml_layers,
-            sources = source,
-            material_function=pass_vor(geo, my_voronoi_geo))
-    else:
-        raise Exception('One of the option must be specified')
-    # vis(sim)
-    return sim
 
 
-def create_simple_geo(coords, shape, size_solid, prism_height=0, prism_axis=(0,0,1)):
-    geometry = []
+def create_simple_geo(geometry, coords, shape, size_solid, prism_height=0, prism_axis=(0,0,1)):
     if shape == "cube":
         for i,coord in enumerate(coords):
             geometry.append(
@@ -300,7 +234,7 @@ def create_simple_geo(coords, shape, size_solid, prism_height=0, prism_axis=(0,0
                     material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4)
                     )
             )
-    if shape == "prism":
+    if shape == "hexagon" or shape == 'triangle':
         for i, coord in enumerate(coords):
             geometry.append(
                 mp.Prism(

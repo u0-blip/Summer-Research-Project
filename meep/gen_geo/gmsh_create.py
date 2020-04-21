@@ -2,11 +2,11 @@ from copy import copy
 import pickle
 from time import time 
 import sys
+import numpy as np
 
 sys.path.append(r'C:\Users\dche145\Downloads\gmsh-4.5.5-Windows64-sdk\gmsh-4.5.5-Windows64-sdk\lib')
 
 import gmsh
-
 
 
 def isCollinear(p0, p1, p2):
@@ -331,6 +331,54 @@ def create_in_abq():
 
 	# execfile('C:/peter_abaqus/Summer-Research-Project/abaqus_macro/abq_create_polygon.py', __main__.__dict__)
 
+def get_simple_data():
+	cube1 = np.array([
+		[0, 0, 0],
+		[0, 0, 1],
+		[0, 1, 0],
+		[0, 1, 1],
+		[1, 0, 0],
+		[1, 0, 1],
+		[1, 1, 0],
+		[1, 1, 1]
+	])
+	cube2 = cube1.copy()
+	for ele in cube2:
+		ele[0] = ele[0] + 1
+		
+	line1 = np.array([
+		[0, 1],
+		[0, 4],
+		[1, 5],
+		[5, 4],
+		[5, 7],
+		[7, 3],
+		[1, 3],
+		[6, 7],
+		[4, 6],
+		[2, 6],
+		[3, 2],
+		[0, 2]
+	])
+	line2 = line1 #+ len(cube1)
+	
+	face1 = np.array([
+		[0, 1, 3, 2],
+		[3, 8, 7, 4],
+		[2, 4, 5, 6],
+		[0, 11, 10, 6],
+		[1, 8, 9, 11],
+		[9, 7, 5, 10]
+	])
+	face2 = face1 #+ len(line1)
+
+	bd1 = np.array([0, 1, 2, 3, 4, 5])
+	bd2 = bd1 #+ len(face1)
+
+	vertices = [cube1, cube2]
+	unique_edge_point_list = [line1, line2]
+	face_index_list = [face1, face2]
+
 def simple_test():
 	gmsh.initialize(sys.argv)
 	gmsh.fltk.initialize()
@@ -365,6 +413,7 @@ def simple_test():
 	# gmsh.model.addPhysicalGroup(2, [new_surf], 100)
 	# gmsh.model.addPhysicalGroup(1, new_lines, 101)
 	pnts = gmsh.model.getBoundary([(2,surf2)], True, True, True)
+	print(type(pnts[0]))
 	gmsh.model.mesh.setSize(pnts, 0.2)
 	gmsh.model.mesh.generate(2)
 
@@ -375,20 +424,22 @@ def simple_test():
 
 	gmsh.finalize()
 
-def abq_create():
-	display = True
+def abq_create(mesh_size = 0.5, display = False, ingeo = 'Voronoi_500_seed_15.geo', out_f='gmsh_test.inp'):
 
-	gmsh.initialize(sys.argv)
+	# gmsh.initialize(sys.argv)
+	gmsh.initialize()
 	if display: gmsh.fltk.initialize()
 	# gmsh.option.setNumber("General.Terminal", 1)
 	gmsh.model.add("Voronoi geo")
 
-	with open(r'C:\\peter_abaqus\\Summer-Research-Project\\meep\\Voronoi_500_seed_15.geo', 'rb') as f:
+	with open(r'C:\\peter_abaqus\\Summer-Research-Project\\meep\\' + ingeo, 'rb') as f:
 		data = pickle.load(f)
 
 	vertices, unique_edge_point_list, face_index_list = data
 
-	# gmsh_stuff()
+	
+
+	
 	geo_p = get_datum(vertices)
 	geo_l = connect_line(unique_edge_point_list, geo_p)
 	geo_f = cover_face(geo_l, face_index_list)
@@ -398,13 +449,28 @@ def abq_create():
 	# pnts = gmsh.model.getBoundary([(3,surf2)], True, True, True)
 	# gmsh.model.mesh.setSize(pnts, 0.2)
 
-	gmsh.model.mesh.field.setAsBackgroundMesh()
+	# gmsh.model.mesh.field.setAsBackgroundMesh()
+	# geo_p = np.array(geo_p)
+	# geo_p = np.expand_dims(geo_p,1)
+	# geo_p = np.concatenate((np.zeros_like(geo_p), geo_p), axis=1)
+	geo_p_list = []
+	for ele1 in geo_p:
+		for ele2 in ele1:
+			geo_p_list.append((0, ele2))
+
+	gmsh.model.mesh.setSize(geo_p_list, mesh_size)
 	gmsh.model.mesh.generate(3)
+	gmsh.write('gmsh_out/' + out_f)
+
 	if display: gmsh.fltk.run()
-	gmsh.write('gmsh_out/v_500.bdf')
 	gmsh.finalize()
 
 
 if __name__ ==  "__main__":
-	simple_test()
+	# simple_test()
+	before = time()
+	abq_create()
+	after = time()
+	elapsed = after-before
+	print('the total time elapsed is ' + str(elapsed))
 	

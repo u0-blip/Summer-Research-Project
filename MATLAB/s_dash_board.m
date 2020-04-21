@@ -4,9 +4,9 @@ dist = 0.2;
 plot_cube = 0;
 
 name = strcat('cube_dis_', sprintf('%.1f',dist), '.bin');
-name = 'voronoi_120_t_400_res_50_rms_5.bin';
+name = 'cube_num_2_3d.bin';
 
-[whole_field, space_dim] = impFile(name);
+[whole_field, space_dim] = impFile(dir, name);
 
 whole_field_rms = squeeze(rms(whole_field));
 whole_field_rms_single(4) = mean(mean(mean(whole_field_rms)));
@@ -34,7 +34,7 @@ range = space_dim(2);
 figure(1)
 set(gcf,'color','w');
 
-roi = [0.1, 0.9];
+roi = [0.01, 0.99];
 len_roi = roi(2) - roi(1);
 trans_roi = @(point, len_roi) ((point./cell_size + 1/2)/len_roi - (1/len_roi - 1)/2)*range*len_roi + 2;
 
@@ -64,7 +64,7 @@ end
 % ylim([-1, 1])
 % zlim([-1, 1])
 
-plot_limit = roi(1)*range:roi(2)*range;
+plot_limit = round(roi(1)*range:roi(2)*range);
 
 if length(size(whole_field)) == 4
     plot_whole_field = whole_field;
@@ -105,7 +105,7 @@ for K = 2 : Q
     time_slice = squeeze(plot_whole_field(K, :, :, :));
     
     subplot(2, 2, 2)
-    pc = pcolor(squeeze(time_slice(1:34, :, range/2)));
+    pc = pcolor(squeeze(time_slice(1:34, :, round(range/2))));
     set(pc, 'EdgeColor', 'none');
     if plot_cube
     for i  = 1:size(cubes, 1)
@@ -122,7 +122,7 @@ for K = 2 : Q
     colorbar
     
     subplot(2, 2, 3)
-    pc = pcolor(squeeze(time_slice(range/2,:,  :)));
+    pc = pcolor(squeeze(time_slice(round(range/2),:,  :)));
     set(pc, 'EdgeColor', 'none');
     for i  = 1:size(cubes, 1)
         cube = squeeze(cubes(i, :, :));
@@ -139,7 +139,7 @@ for K = 2 : Q
     colorbar
     
     subplot(2, 2, 4)
-    pc = pcolor(squeeze(plot_whole_field_rms(1:34, :, range/2)));
+    pc = pcolor(squeeze(plot_whole_field_rms(1:34, :, round(range/2))));
     set(pc, 'EdgeColor', 'none');
     for i  = 1:size(cubes, 1)
         cube = squeeze(cubes(i, :, :));

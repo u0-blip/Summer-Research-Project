@@ -49,7 +49,6 @@ def isCollinear(p0, p1, p2):
 		# # print('wrong : ' + str(dist1) + ' ' + str(dist2))
 		return False
 
-<<<<<<< HEAD
 def get_datum(p, vertices):
 	for item in vertices:
 		p.DatumPointByCoordinate(coords=(item[0], item[1], item[2]))
@@ -268,8 +267,6 @@ def track_time(i):
 	print('Total elapsed time: ' + str(elapsed))
 	print('Elapsed time interval: ' + str(interval))
 
-=======
->>>>>>> 282301670badcb8ae56a81d9139901796b2ec939
 
 data = []
 convexHull = []

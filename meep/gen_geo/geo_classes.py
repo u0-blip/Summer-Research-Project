@@ -22,10 +22,10 @@ class voronoi_geo:
     num_mat = 2
     eps_mat = [mat1, mat2]
 
-    def __init__(self, num_seeds, vor = None):
+    def __init__(self, num_seeds, size_cell = 1, vor = None):
         if vor == None:
             self.num_seeds = num_seeds
-            self.points = np.random.rand(self.num_seeds, 3) - 0.5
+            self.points = (np.random.rand(self.num_seeds, 3) - 0.5)*size_cell
             self.vor = Voronoi(self.points)
         else:
             self.num_seeds = len(vor.points)

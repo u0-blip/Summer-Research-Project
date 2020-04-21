@@ -74,3 +74,5 @@ fortran_read/out_small.peter
 *.meta
 voronoi*.cae
 *.bdf
+*.inp
+*.eps
