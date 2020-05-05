@@ -61,6 +61,3 @@
 *.PDF   diff=astextplain
 *.rtf   diff=astextplain
 *.RTF   diff=astextplain
-
-*.pyc
-__pycache__

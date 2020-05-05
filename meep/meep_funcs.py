@@ -1,4 +1,3 @@
-import meep as mp
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -7,18 +6,26 @@ from numpy import cos, sin
 import json
 from scipy.spatial import Voronoi, voronoi_plot_2d
 import matplotlib.pyplot as plt
-import time
+from time import time
 from scipy.spatial import ConvexHull
 from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting 
 
+import os
+if os.name == 'posix':
+    import meep as mp
+    air = mp.Medium(epsilon=1.0)
 from gen_geo import bounded_voronoi
 from gen_geo import convex_hull
 from gen_geo.geo_classes import *
+from gen_geo.simple_geo_and_arg import get_polygon_coord, get_coord
+from configs import config
 
+if os.name == 'posix':
+    import meep as mp
+    air = mp.Medium(epsilon=1.0)
 
 size_crystal_base = [0.1, 0.1, 0.1]
 num_crystal = 200
-air = mp.Medium(epsilon=1.0)
 
 def closest_node(node, nodes):
     # nodes = np.asarray(nodes)
@@ -38,8 +45,14 @@ def pass_vor(func, vor):
     return wrapper
 
 def my_eps(my_vor, coord):
-    acoord = np.abs(coord)
-    if (acoord[0] < 0.5 and acoord[1] < 0.5 and acoord[2] < 0.5 ):
+    b_box = my_vor.bounding_box
+
+    x_in = np.logical_and(b_box[0, 0] <= coord[0], coord[0] <= b_box[0, 1])
+    y_in = np.logical_and(b_box[1, 0] <= coord[1], coord[1] <= b_box[1, 1])
+    z_in = np.logical_and(b_box[2, 0] <= coord[2], coord[2] <= b_box[2, 1])
+    in_box = np.logical_and(np.logical_and(x_in, y_in), z_in)
+
+    if in_box:
         return my_vor.parts_eps[closest_node([coord[0],coord[1],coord[2]], my_vor.points)]
     else:
         return air
@@ -207,8 +220,13 @@ def index2coord(index, size_arr, size_geo):
 
 
 def create_simple_geo(geometry, coords, shape, size_solid, prism_height=0, prism_axis=(0,0,1)):
+    if config.get('sim', 'type') != 'checker':
+        coords = get_coord(config.getfloat('geo', 'distance'))
+    else:
+        pass
+
     if shape == "cube":
-        for i,coord in enumerate(coords):
+        for i, coord in enumerate(coords):
             geometry.append(
                 mp.Block(
                     size_solid, 
@@ -217,7 +235,7 @@ def create_simple_geo(geometry, coords, shape, size_solid, prism_height=0, prism
                     )
             )
     elif shape == "sphere":
-        for i,coord in enumerate(coords):
+        for i, coord in enumerate(coords):
             geometry.append(
                 mp.Sphere(
                     radius = size_solid, 
@@ -226,7 +244,7 @@ def create_simple_geo(geometry, coords, shape, size_solid, prism_height=0, prism
                     )
             )
     if shape == "ellipsoid":
-        for i,coord in enumerate(coords):
+        for i, coord in enumerate(coords):
             geometry.append(
                 mp.Ellipsoid(
                     size_solid, 
@@ -235,7 +253,8 @@ def create_simple_geo(geometry, coords, shape, size_solid, prism_height=0, prism
                     )
             )
     if shape == "hexagon" or shape == 'triangle':
-        for i, coord in enumerate(coords):
+        p_coords = get_polygon_coord(coords, config.getfloat('geo','particle_radius'))
+        for i, coord in enumerate(p_coords):
             geometry.append(
                 mp.Prism(
                     vertices = coord,

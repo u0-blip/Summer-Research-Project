@@ -4,6 +4,7 @@ from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
 import pickle
 import sys
+import itertools
 
 def centroid_region(verticesSinglePoly):
     verticesSinglePoly = np.array(verticesSinglePoly)
@@ -261,11 +262,109 @@ def del_useless_edges(vor, hull):
                         face_index_list[macro_i][i].append(k) #= np.where(unique_edge_list[macro_i] == edge)[0]
                         break
                     
-        # print('merge to shape' + str(merge_to_shape))
-        # print('face index list' + str(face_index_list[macro_i]))
-        # print('unique edge list' + str(unique_edge_list[macro_i]))
+    # face_index_list = rid_dup_face(face_index_list, unique_edge_list)
 
     return unique_edge_list, face_index_list
+
+def unroll_2(list_to_unroll):
+    cum_unroll = 0
+
+
+def rid_dup_face(face_index_list, unique_edge_list):
+    """using center and norm to uniquely identify a face, get rid of it at other places."""
+
+    # face_index_list = unroll_2(face_index_list)
+    num_edge_per_face = []
+    for i in range(len(face_index_list)):
+        num_edge_per_face.append([])
+        for j in range(len(face_index_list[i])):
+            num_edge_per_face[i].append(len(face_index_list[i][j]))
+
+    len_num_edge = np.cumsum([len(item) for item in num_edge_per_face])
+
+    flatten = lambda l: [item for sublist in l for item in sublist]
+
+
+    unrolled = flatten(num_edge_per_face)
+
+    unrolled = np.array(unrolled)
+    min = np.min(unrolled)
+    max = np.max(unrolled)
+    bins = np.arange(min, max+1)
+    bins_index = [[] for i in range(len(bins))]
+
+    for i in range(len(unrolled)):
+        bins_index[unrolled[i]-min].append(i)
+
+    # for bin in bins_index:
+
+
+    print(bins_index)
+    # num_edge_per_face = np.array(num_edge_per_face)
+    # args = np.argsort(unrolled)
+
+
+    return face_index_list
+    # dup_sets = []
+    # for i in range(len(node)):
+    #     for j in range(i):
+    #         if node[i] == node[j]:
+    #             # print(str(i) + ' is the same as ' + str(j))
+    #             dup_sets.append([i,j])
+                
+    # unique_sets = []
+
+    # for i in range(len(dup_sets)):
+    #     found = False
+    #     for j, sets in enumerate(unique_sets):
+    #         if dup_sets[i][0] in sets or dup_sets[i][1] in sets:
+    #             sets.add(dup_sets[i][0])
+    #             sets.add(dup_sets[i][1])
+    #             found = True
+    #             break
+    #     if found:
+    #         found = False
+    #     else:
+    #         unique_sets.append({dup_sets[i][0], dup_sets[i][1]})
+    
+    # hashed_nodes = set()
+
+
+
+    # replaced_with = []
+    # for sets in unique_sets:
+    #     replaced_with.append(sets.pop())
+
+    # list_nodes = []
+    # index_for_sets = []
+
+    # for i, s in enumerate(unique_sets):
+    #     for n in s:
+    #         list_nodes.append(n)
+    #         index_for_sets.append(i)
+    #         hashed_nodes.add(n)
+
+    # list_np = np.sort(np.array(list_nodes))
+    # sorted_arg = np.argsort(list_nodes)
+    
+    
+    # for v in volumes:
+    #     for ele in v:
+    #         for i, e in enumerate(ele[1:]):
+    #             e_1base = e -1
+    #             j = i + 1
+    #             if e_1base not in hashed_nodes:
+    #                 continue
+    #             index = np.searchsorted(list_np, e_1base, side='left')
+    #             # print(list_np)
+    #             # print(e)
+    #             # print()
+    #             if e_1base == list_np[index]:
+    #                 # print(ele[j])
+    #                 # print(replaced_with[index_for_sets[sorted_arg[index]]])
+    #                 # print()
+    #                 ele[j] = replaced_with[index_for_sets[sorted_arg[index]]] + 1
+
 
 if __name__ == "__main__":
     # points = np.random.rand(30, 2)   # 30 random points in 2-D

@@ -1,50 +1,20 @@
 import sys
-from meep_funcs import *
-from gen_geo.bounded_voronoi import *
-from gen_geo.simple_geo_and_arg import *
+import os
+from gen_geo.bounded_voronoi import b_voronoi, bounding_box
 import random
-from configs import config
+from configs import *
 import math
 import cmath
+import numpy as np
+from time import time
+import pickle
+from meep_funcs import read_windows, write_windows
+from animator import my_animate, my_rms_plot
 
 
 def index2coord(index, size_arr, size_geo):
     index = (index/size_arr - 0.5)*size_geo
     return index
-
-
-# def D3(size_cell):
-#     perf_sim = True
-
-#     # b_voronoi(n_towers = 500, seed=15)
-
-#     coords = get_coord(dist)
-#     size_solid = np.array([1, 1, 1])*float(args['size'])
-#     radius = 0.1
-#     prism_coords = get_prism_coord(dist, radius)
-
-
-#     # geo = create_simple_geo(coords, shape="cube", size_solid=size_solid)
-#     # geo = create_simple_geo(prism_coords, shape="prism", size_solid=size_solid, prism_height=0.2, prism_axis=mp.Vector3(0, 0, 1))
-    
-#     sim = create_sim(mode='eps', geo=my_eps, size_cell = size_cell, my_voronoi_geo = my_voronoi_geo, res = 175, wavelength = 6.6, dim=3)
-#     # sim = create_sim(mode='geo', geo=geo, my_voronoi_geo=None, size_cell=size_cell, res=75)
-
-#     sim.init_sim()
-#     eps_data = sim.get_array(center=mp.Vector3(), size=size_cell, component=mp.Dielectric)
-
-#     if not perf_sim:
-#         size = eps_data.shape
-#         slice_eps = eps_data[round(size[0]/2), :, :]
-#         plt.pcolormesh(slice_eps)
-#         plt.show()
-#     else:
-#         get_sim_output(str(args['file']), sim, length_t = 20, out_every=0.6, get_3_field=False)
-
-#     write_windows(eps_data, file_name+'.eps')
-
-#     # out_num_geo('checker_geo.bin', my_checker_geo, range_geo=[1.0,1.0,1.0], range_index=[100,100,100])
-    
 
 def gen_checker(size_cell, dist, dim = 2):
     checker_coord = []
@@ -57,44 +27,37 @@ def gen_checker(size_cell, dist, dim = 2):
             continue
         for j in range(int(dist)):
             if dim == 2:
-                checker_coord.append([xaxis[i], yaxis[j]])
+                checker_coord.append(mp.Vector3(xaxis[i], yaxis[j]))
             elif dim == 3:
                 for k in range(int(dist)):
-                    checker_coord.append([xaxis[i], yaxis[j], zaxis[k]])
+                    checker_coord.append(mp.Vector3(xaxis[i], yaxis[j], zaxis[k]))
     return checker_coord
 
+def create_sim(geo):
 
-def create_sim(mode, geo, my_voronoi_geo, size_cell, res = 50, wavelength=1, dim=3):
     if config.getboolean('boundary', 'pml'):
         pml_layers = [mp.PML(0.5)]
     else:
         pml_layers = []
 
-
-    # my_checker_geo = checker_geo()
-
-    # print(type(center))
-    # print(size)
-
     source = source_wrapper()
-    # gen_polygon_data()
-    # print(pass_vor(geo, my_voronoi_geo)((0.5, 0.5, 0.5)))
-    if mode == 'geo':
+
+    if sim_t == 'checker' or sim_t == 'shape':
         sim = mp.Simulation(resolution=res,
-                    cell_size=size_cell,
+                    cell_size=cell_size,
                     boundary_layers=pml_layers,
                     sources = source,
                     geometry=geo,
                     default_material=mp.Medium(epsilon=7.1))
-    elif mode == 'eps':
+    elif sim_t == 'voronoi':
         sim = mp.Simulation(resolution=res,
-            cell_size=size_cell,
+            cell_size=cell_size,
             boundary_layers=pml_layers,
             sources = source,
-            material_function=pass_vor(geo, my_voronoi_geo))
+            material_function=pass_vor(my_eps, geo))
     else:
         raise Exception('One of the option must be specified')
-    # vis(sim)
+    
     return sim
 
 def gaussian_beam(sigma, k, x0):
@@ -116,31 +79,37 @@ def source_wrapper():
     size = np2mp(s)
     center = np2mp(center)
 
-    fcen = config.getfloat('source', 'fcen') # center frequency of CW source (wavelength is 1 μm)
     mode = config.get('source', 'mode')
+    fwidth = config.getfloat('source', 'fwidth')
+    if not config.getboolean('sim', 'calc_flux'):
+        pre_source = mp.ContinuousSource(fcen, fwidth=fwidth*fcen)
+    else:
+        pre_source = mp.GaussianSource(fcen, fwidth=fwidth*fcen)
     if mode == 'normal':
         return [
-            mp.Source(mp.ContinuousSource(fcen, fwidth=0.2*fcen),
+                    mp.Source(src=pre_source,
                     component= mp.Ez,
                     center=center,
                     size=size)
-                    ]
+                ]
 
     elif mode == 'gaussian':
         tilt_angle = math.radians(config.getfloat('source', 'tilt_angle')) # angle of tilted beam
         k = mp.Vector3(x=2).rotate(mp.Vector3(z=1),tilt_angle).scale(fcen)
         sigma = config.getfloat('source','sigma') # beam width
         # src_pt = mp.Vector3(y=4) # if you change center, you have to change phase and weird shit like that
-        return [mp.Source(src=mp.ContinuousSource(fcen, fwidth=0.2*fcen),
-                        component=mp.Ez,
-                        center=center,
-                        size=size,
-                        amp_func=gaussian_beam(sigma,k,center))]
+
+        return [
+                    mp.Source(src=pre_source,
+                    component=mp.Ez,
+                    center=center,
+                    size=size,
+                    amp_func=gaussian_beam(sigma, k, center))
+                ]
     else:
         return None
 
-
-def sim_wrapper(size_cell, size_solid, per_sim = False):
+def sim_t_shape(sim_t, size_solid, sim_dim, geo, cell_size):
 
     # size_solid[1] = dist
     # size_solid = np.array([1, 1, mp.inf])*(size_cell[0]/(dist-1))
@@ -149,171 +118,329 @@ def sim_wrapper(size_cell, size_solid, per_sim = False):
     shape = config.get('geo', 'shape')
 
     if shape=='cube':
-        s = size_solid
+        s = np2mp(size_solid)
     elif shape == 'sphere':
         s = radius
     elif shape == 'hexagon':
         s = size_solid
-        coords = get_polygon_coord(dist, radius)
     elif shape == 'triangle':
         s = size_solid
-        coords = get_polygon_coord(dist, radius)
     else:
         print('not a available shape')
         s = size_solid
-        coords = []
+        
+    coords = []
 
-    if config.get('sim','type') == 'checker':
-        coords = gen_checker(size_cell, config.get('geo','spacing'), dim)
-
-    # geo = create_simple_geo(coords, shape=shape, size_solid=s)
-    if config.getboolean('boundary', 'metallic'):
-        geo = [mp.Block(size_cell, material=mp.metal)]
-        s = size_cell-0.5
-        if sim_dim == 2:
-            s[2] = 0
-        geo.append(mp.Block(s, material=mp.air))
-    else:
-        geo = []
+    if sim_t == 'checker':
+        coords = gen_checker(cell_size, config.get('geo','spacing'), sim_dim)
 
     geo = create_simple_geo(geo, coords, shape=shape, size_solid=s, prism_height=0.2, prism_axis=mp.Vector3(0, 0, 1))
+    return geo
+
+def get_flux_region(sim):
+    nfreq = 100
     
+    # reflected flux
+    refl_fr = mp.FluxRegion(center=np2mp(get_array('source', 'near_flux_loc')) ,size=np2mp(get_array('source', 'flux_size')))
+    frs = []
+    frs.append(mp.FluxRegion(
+        center=mp.Vector3(4, 0, 0) ,
+        size=mp.Vector3(0, 9, 0)
+        ))
+    frs.append(mp.FluxRegion(
+        center=mp.Vector3(-4.5, 0, 0)  ,
+        size=mp.Vector3(0, 9, 0)
+        ))
+    frs.append(mp.FluxRegion(
+        center=mp.Vector3(0, 4.5, 0)  ,
+        size=mp.Vector3(9, 0, 0)
+        ))
+    frs.append(mp.FluxRegion(
+        center=mp.Vector3(0, -4.5, 0) ,
+        size=mp.Vector3(9, 0, 0)
+        ))
 
-    # sim = create_sim(mode='eps', geo=my_eps, my_voronoi_geo = my_voronoi_geo, res = 50)
-    sim = create_sim(mode='geo', geo=geo, my_voronoi_geo=None, size_cell=size_cell, res=config.getfloat('sim', 'resolution'), wavelength = 1, dim=sim_dim)
+    flux_width = config.getfloat('source', 'flux_width')
 
-    sim.init_sim()
-    eps_data = sim.get_array(center=mp.Vector3(), size=size_cell, component=mp.Dielectric)
+    # the following side are added in a clockwise fashion
+    
+    side = [sim.add_flux(fcen, flux_width*fcen, nfreq, fr) for fr in frs]
+    
+    # transmitted flux
 
+    return sim, side
 
-    if per_sim:
-        sim_run_wrapper(file_name, sim, length_t = config.getfloat('sim', 'time'), out_every=0.6, get_3_field=False)
+def geo_sim(vor = None):
+    # dimensions = mp.CYLINDRICAL
+    if config.getboolean('visualization', 'structure') or config.getboolean('general', 'perform_mp_sim'):
+        if sim_dim == 2:
+            size_solid[2] = mp.inf
+            cell_size[2] = 0
+
+        if config.getboolean('boundary', 'metallic'):
+            geo = [mp.Block(cell_size, material=mp.metal)]
+            s = cell_size-0.5
+            if sim_dim == 2:
+                s[2] = 0
+            geo.append(mp.Block(s, material=mp.air))
+        else:
+            geo = []
+
+        if  sim_t ==  'shape' or sim_t == 'checker':
+            geo = sim_t_shape(sim_t, size_solid, sim_dim, geo, cell_size)
+        else:
+            geo = vor
+
+        sim = create_sim(geo=geo)
+        
+        if config.getboolean('sim', 'calc_flux'):
+            basic_sim = create_sim(geo=[])
+            basic_sim, basic_sides = get_flux_region(basic_sim)
+            sim, sides = get_flux_region(sim)
+
+        sim.init_sim()
+        eps_data = sim.get_array(center=mp.Vector3(), size=cell_size, component=mp.Dielectric)
+    
+    if config.getboolean('visualization', 'structure'):
+        viz_struct(sim, sim_dim, eps_data)
+
+    if config.getboolean('general', 'perform_mp_sim'):
+        if not config.getboolean('sim', 'calc_flux'):
+            sim_run_wrapper(file_name, sim, length_t = config.getfloat('sim', 'time'), write_file = True)
+
+        else:
+            sim_run_wrapper(
+                None, basic_sim, length_t = config.getfloat('sim', 'time'), write_file = False
+                )
+            basic_trans_flux_data = basic_sim.get_flux_data(basic_sides[0])
+            basic_trans_flux_mag = mp.get_fluxes(basic_sides[0])
+
+            # get rid of the straight transmitted data to get the reflected data
+            sim.load_minus_flux_data(sides[0], basic_trans_flux_data)
+            sim_run_wrapper(
+                file_name, sim, length_t = config.getfloat('sim', 'time'), write_file = False
+                )
+
+            trans_flux_mag = [np.array(mp.get_fluxes(side)) for side in sides]
+            trans_flux_mag = np.array(trans_flux_mag)
+
+            flux_freqs = np.array(mp.get_flux_freqs(sides[0]))
+            wave_len = 1/flux_freqs
+            
+            normalise_tran = trans_flux_mag[1]/basic_trans_flux_mag
+            loss = (basic_trans_flux_mag - np.sum(trans_flux_mag[1:], axis=0))/basic_trans_flux_mag
+            reflected = -trans_flux_mag[0]/basic_trans_flux_mag
+
+            if mp.am_master():
+                plt.figure()
+                plt.plot(wave_len, reflected,'bo-',label='reflectance')
+                plt.plot(wave_len, normalise_tran,'ro-',label='transmittance')
+                plt.plot(wave_len,loss,'go-',label='loss')
+                # plt.axis([5.0, 10.0, 0, 1])
+                plt.xlabel("wavelength (μm)")
+                plt.legend(loc="upper right")
+                plt.show()
+
         write_windows(eps_data, file_name+'.eps')
-        vis_res(sim)
+        viz_res(sim, sim_dim)
 
-    viz_struct(sim)
     plt.show()
-    # out_num_geo('checker_geo.bin', my_checker_geo, range_geo=[1.0,1.0,1.0], range_index=[100,100,100])
 
-def sim_run_wrapper(f_name, sim, length_t=20, out_every=0.6, get_3_field = False):
-    if get_3_field:
-        result = [[] for i in range(3)]
-        @static_vars(counter=0)
-        def f(sim):
-            result[0].append(sim.get_efield_x()) 
-            result[1].append(sim.get_efield_y())  
-            result[2].append(sim.get_efield_z())   
-            # f.counter += 1
-            # if f.counter%5 == 0:
-            #     arr = np.array(result)
-            #     write_windows(arr, f_name+str(f.counter))
-            #     write_windows(arr.shape, f_name+str(f.counter)+'.meta')
+def sim_run_wrapper(f_name, sim, length_t=20, write_file=True):
+    result = []
+    def f(sim):
+        result.append(sim.get_array(component=mp.Ez))
+
+    out_every = config.getfloat('sim', 'out_every')
+    if not config.getboolean('sim', 'calc_flux'):
+        sim.run(mp.at_every(out_every, f), until=length_t)
     else:
-        result = []
-        @static_vars(counter=0)
-        def f(sim):
-            result.append(sim.get_array(component=mp.Ez))
-            # f.counter += 1
-            # if f.counter%5 == 0:
-            #     arr = np.array(result)
-            #     write_windows(arr, f_name+str(f.counter))
-            #     write_windows(arr.shape, f_name+str(f.counter)+'.meta')
+        pt = np2mp(get_array('source', 'near_flux_loc'))
+        sim.run(mp.at_every(out_every, f), until_after_sources=mp.stop_when_fields_decayed(50,mp.Ez, pt,1e-3))
 
-    sim.run(mp.at_every(out_every, f), until=length_t)
-
-    result = np.array(result)
-
-    write_windows(result, f_name)
-
-    print('The output shape of the result matrix is: ' + str(result.shape))
+    if write_file:
+        result = np.array(result)
+        write_windows(result, f_name)
+        print('The output shape of the result matrix is: ' + str(result.shape))
+    
     return result
 
-def vis_res(sim):
-    ez_data = sim.get_array(component=mp.Ez)
-    plt.figure()
-    plt.title('beam freq: ' + config.get('source','fcen'))
-    plt.imshow(np.flipud(np.transpose(np.real(ez_data))), interpolation='spline36', cmap='RdBu')
-    plt.axis('off')
+class translate:
+    def __init__(self, leftMin, leftMax, rightMin, rightMax):
+        # Figure out how 'wide' each range is
+        self.leftMin = leftMin
+        self.leftMax = leftMax
+        self.rightMin = rightMin
+        self.rightMax = rightMax
+        self.leftSpan = leftMax - leftMin
+        self.rightSpan = rightMax - rightMin
 
+    def __call__(self, value):
+        # Convert the left range into a 0-1 range (float)
+        valueScaled = float(value - self.leftMin) / float(self.leftSpan)
 
-def viz_struct(sim):
-    viz = config.getboolean('sim', 'visualize')
-    if viz:
+        # Convert the 0-1 range into a value in the right range.
+        return self.rightMin + (valueScaled * self.rightSpan)
+
+def viz_res(sim, sim_dim):
+    if not (config.getboolean('visualization', 'transiant') or config.getboolean('visualization', 'rms')):
+        return
+    
+    if sim_dim == 2:
+        ez_data = read_windows(data_dir + project_name + '.mpout')
+        eps = read_windows(data_dir + project_name + '.mpout.eps')
+
+        trans = translate(np.min(eps), np.max(eps), 0, 254)
+        vtrans = np.vectorize(trans)
+        eps = vtrans(eps).astype(np.uint8)
+        import cv2
+        eps_edges = cv2.Canny(eps,100,200).astype(np.bool)
+
+        if config.getboolean('visualization', 'transiant'):
+            my_animate(ez_data)
+
+        if config.getboolean('visualization', 'rms'):
+            out_every = config.getfloat('sim', 'out_every')
+            time_sim = config.getfloat('sim', 'time')
+            cell_size = get_array('geo', 'cell_size')
+            start = int(cell_size[2]*2/out_every)
+            end = int(time_sim/out_every) - 1
+            print('Time period for RMS: ', [start, end])
+
+            ez_data[-2, eps_edges] = np.max(ez_data)*len(ez_data)/20
+            my_rms_plot(ez_data, 0, 'rms', [start, end])
+
+    else:
+        ez_data = sim.get_array(component=mp.Ez)
+        s = ez_data.shape
         plt.figure()
-        if sim_dim == 2:
-            sim.plot2D()
+        plt.subplot(3, 1, 1)
+        plt.title('xy')
+        plt.pcolor(np.flipud(np.transpose(np.real(ez_data[:, :, round(s[2]/2)]))), interpolation='spline36', cmap='RdBu')
+        plt.axis('off')
+        plt.subplot(3, 1, 2)
+        plt.title('xz')
+        plt.pcolor(np.flipud(np.transpose(np.real(ez_data[:, round(s[2]/2), :]))), interpolation='spline36', cmap='RdBu')
+        plt.axis('off')
+        plt.subplot(3, 1, 3)
+        plt.title('yz')
+        plt.pcolor(np.flipud(np.transpose(np.real(ez_data[round(s[2]/2), :, :]))), interpolation='spline36', cmap='RdBu')
+        plt.axis('off')
+
+def viz_struct(sim, sim_dim, eps_data):
+    plt.figure()
+    if sim_dim == 2:
+        sim.plot2D()
+    else:
+        size = eps_data.shape
+        index = np.unravel_index(eps_data.argmax(), eps_data.shape)
+        plot_axis = config.get('sim', '3d_plotting_axis')
+
+        if plot_axis == 'x':
+            slice_eps = eps_data[index[0], :, :]
+            plt.xlabel('y')
+            plt.ylabel('z')
+        elif plot_axis == 'y':
+            slice_eps = eps_data[:, index[1],  :]
+            plt.xlabel('x')
+            plt.ylabel('z')
         else:
-            size = eps_data.shape
-            index = np.unravel_index(eps_data.argmax(), eps_data.shape)
-            plot_axis = config.get('sim', '3d_plotting_axis')
+            slice_eps = eps_data[:, :, index[2]]
+            plt.xlabel('x')
+            plt.ylabel('y')
 
-            if plot_axis == 'x':
-                slice_eps = eps_data[index[0], :, :]
-                plt.xlabel('y')
-                plt.ylabel('z')
-            elif plot_axis == 'y':
-                slice_eps = eps_data[:, index[1],  :]
-                plt.xlabel('x')
-                plt.ylabel('z')
-            else:
-                slice_eps = eps_data[:, :, index[2]]
-                plt.xlabel('x')
-                plt.ylabel('y')
+        plt.title('print slice ' + str(index[0]))
+        
+        plt.pcolormesh(slice_eps)
 
-            plt.title('print slice ' + str(index[0]))
-            
-            plt.pcolormesh(slice_eps)
-# class config_wrapper(configparser.ConfigParser):
-#     def __init__(self, f_name, section):
-#         super().__init__()
-#         self.read(filenames = f_name)
-#         self.config = self[section]
+def wsl_main():
+    if verbals: last = time()
+    
+    if config.get('sim', 'type') == 'voronoi':
+        if config.getboolean('general', 'gen_vor'):
+            vor, my_voronoi_geo, geo = b_voronoi(to_out_geo = True)
+        else:
+            with open(config.get('process_inp', 'posix_data') + config.get('process_inp', 'project_name') + '.vor', 'rb') as f:
+                vor, my_voronoi_geo = pickle.load(f)
+                
+        vor = my_voronoi_geo
+    else:
+        vor = None
 
-#     def get_array(self, name):
-#         val = self.config[name]
-#         val = np.fromstring(val, dtype = np.float, sep=',')
-#         return val
-#     def get_types(self, name):
-#         val = self.config[name]
-#         return val.split(',')
-#     def val(self, name):
-#         val = self.config[name]
-#         if '.' in val and val[0].isnumeric():
-#             return float(val)
-#         elif val.isnumeric():
-#             return int(val)
-#         else:
-#             return val
-#     def getbool(self, name):
-#         return self['simple_geo.sim'].getboolean(name)
+    if verbals: 
+        now = time()
+        print('created voronoi geo, time: ' + str(now - last))
+        last = now
 
-def get_array(section,  name, type = np.float):
-    val = config.get(section, name)
-    val = np.fromstring(val, dtype = type, sep=',')
-    return val
+    geo_sim(vor)
+
+from scipy.integrate import romb
+def get_ms(arr, rms_interval):
+    rms_shape = np.array(arr.shape)
+    rms_shape[0] = np.floor(rms_shape[0]/rms_interval)
+    rms_arr = np.zeros(rms_shape.astype(np.int))
+    for i in range(0, rms_shape[0]):
+        slice = arr[i*rms_interval:(i+1)*rms_interval]
+        slice = slice**2
+        int_slice = romb(slice, dx=1, axis=0)/(rms_interval-1)*10e26
+        # rms_arr[i, :, :, :] = np.sqrt(np.mean(slice, axis=0))
+        rms_arr[i, :, :, :] = int_slice
+    return rms_arr
+
+def process_meep_arr(arr = None):
+    if arr == None:
+        arr = read_windows(data_dir + config.get('process_inp', 'project_name')+'.mpout')
+    
+    clean = get_ms(arr, 5)
+    print(clean.shape)
+    print(np.amax(clean))
+    write_windows(clean, data_dir + config.get('process_inp', 'project_name')+'.clean')
+
+def win_main():
+    if config.getboolean('general', 'gen_gmsh'):
+        if verbals: last = time()
+        voronoi_create(display = True, to_out_f = True, to_mesh = True, in_geo = None)
+
+        if verbals: 
+            now = time()
+            print('Create input file, time: ' + str(now - last))
+            last = now
+
+    if config.getboolean('general', 'process_inp'):
+        if verbals: last = time()
+        processing()
+        if verbals: 
+            now = time()
+            print('Process input file, time: ' + str(now - last))
+            last = now
+
+    if config.getboolean('general', 'sim_abq'):
+        if verbals: before = time()
+        abaqusing()
+        if verbals: 
+            after = time()
+            elapsed = after-before
+            print('Time for Abaqusing is ' + str(elapsed))
+
+    if config.getboolean('general', 'clean_array'):
+        if verbals: before = time()
+        process_meep_arr()
+        if verbals: 
+            after = time()
+            elapsed = after-before
+            print('Time for clean array is ' + str(elapsed))
+
 
 if __name__ == "__main__":
+    last = time()
+    verbals = config.getboolean('general', 'verbals')
 
-    # dimensions = mp.CYLINDRICAL
+    if os.name == 'nt':
+        from gen_geo.gmsh_create import voronoi_create
+        from gen_geo.process_inp_file import processing, abaqusing
 
-    file_name = config.get('file', 'file_out')
-    dist = config.getfloat('geo', 'distance')
-    per_sim = config.getboolean('sim', 'perform_sim')
-    
-    # random.seed(15)
-    # v_seed_points = np.random.rand(500, 3) - 0.5
-    # vor = Voronoi(v_seed_points)
-    # my_voronoi_geo = voronoi_geo(num_seeds=500, vor=vor)
-
-    sim_dim = config.getint('sim', 'dimension')
-    size_solid = get_array('geo', 'particle_size')
-    size_cell = get_array('geo', 'cell_size')
-
-    if sim_dim == 2:
-        size_solid[2] = mp.inf
-        size_cell[2] = 0
-
-    sim_wrapper(size_cell, size_solid,  per_sim=per_sim)
-
-    # D3(size_cell = np.array([1, 1, 1])*1.8)
-
+        win_main()
+    elif os.name == 'posix':
+        from meep_funcs import *
+        from gen_geo.simple_geo_and_arg import *
+        wsl_main()

@@ -5,9 +5,11 @@ import sys
 import numpy as np
 
 sys.path.append(r'C:\Users\dche145\Downloads\gmsh-4.5.5-Windows64-sdk\gmsh-4.5.5-Windows64-sdk\lib')
+sys.path.append('..')
+# sys.path.append(r'/mnt/c/Users/dche145/Downloads/gmsh-4.5.5-Windows64-sdk/gmsh-4.5.5-Windows64-sdk/lib')
 
+from configs import config, get_array
 import gmsh
-
 
 def isCollinear(p0, p1, p2):
 	p0 = np.array(p0)
@@ -59,30 +61,6 @@ def in_record(pointOn, records):
 	return -1
 
 def connect_line(edge_list, geo_p):
-	# edge_pointOn = []
-
-	# edge_creation_record = []
-	
-	# for edge in edge_list:
-	# 	index1 = edge[0]+1 if edge[0] < 999 else edge[0]+2
-	# 	index2 = edge[1]+1 if edge[0] < 999 else edge[1]+2
-	# 	points=((d1[index1], d1[index2]),)
-
-	# 	recorded_point = [vertices[edge[0]], vertices[edge[1]]]
-
-	# 	recorded = in_record(recorded_point, edge_creation_record)
-	# 	edge_creation_record.append(recorded_point)
-
-	# 	if recorded == -1:
-	# 		edge_feature = p.WirePolyLine(points=points, mergeType=IMPRINT, meshable=ON)
-	# 		for edge_obj_in_part in p.edges:
-	# 			if edge_obj_in_part.featureName == edge_feature.name:
-	# 				edge_pointOn.append(edge_obj_in_part.pointOn)
-	# 				break
-	# 	else:
-	# 		edge_pointOn.append(edge_pointOn[recorded])
-	# # this return a list of edge point on that can uniquely identify the edge
-	# return edge_pointOn
 	geo_l = []
 	for i, polygon in enumerate(edge_list):
 		geo_ll = []
@@ -93,16 +71,6 @@ def connect_line(edge_list, geo_p):
 	return geo_l
 
 def cover_face(geo_l, face_index_list):
-	# edges = p.edges
-
-	# # for some reason, Abaqus refuse to create face if the face already exist
-	# # even tho it would happily do it for edges
-	# # so what we need to do is to test whether the edges have already be created
-	# # use the otherone to put it the pointOn
-	# # Once go past the face, the cell creation shouldn't be a big problem
-	# face_creation_record_pointOn = []
-	# face_pointOn = []
-
 	geo_f = []
 	for i, polygon in enumerate(face_index_list):
 		geo_ff = []
@@ -115,20 +83,6 @@ def cover_face(geo_l, face_index_list):
 			geo_ff.append(surface)
 		geo_f.append(geo_ff)
 	return geo_f
-			
-
-	# 	recorded = in_record(face_creation_pointOn, face_creation_record_pointOn)
-
-	# 	face_creation_record_pointOn.append(face_creation_pointOn)
-	# 	if recorded == -1:
-	# 		face_feature = p.CoverEdges(edgeList = face_edge_obj, tryAnalytical=True)
-	# 		for face_obj_in_part in p.faces:
-	# 			if face_obj_in_part.featureName == face_feature.name:
-	# 				face_pointOn.append(face_obj_in_part.pointOn)
-	# 	else:
-	# 		face_pointOn.append(face_pointOn[recorded])
-	# # this return a list of face point on that can uniquely identify the face
-	# return face_pointOn
 
 def put_in_set(i, sets_list):
 	in_sets = False
@@ -235,31 +189,10 @@ def getCells(face_pointOn, cell_index_list):
 def fill_cell(geo_f):
 	volumes = []
 	for i, cell in enumerate(geo_f):
-		# surf_loop = []
-		# for face in cell:
-		# 	surf_loop.append(geo_f[i][face])
 		geo_surf_loop = gmsh.model.occ.addSurfaceLoop(cell)
 		vol = gmsh.model.occ.addVolume([geo_surf_loop])
 		volumes.append(vol)
 	return volumes
-	# cell_index_list = getCells(face_pointOn, cell_index_list)
-
-	# for cell in cell_index_list:
-	# 	faces = p.faces
-	# 	# print('cell is ' + str(cell))
-	# 	cell_face_obj = []
-	# 	for face_index in cell:	
-	# 		# print('face point on: ' + str(face_pointOn[face_index]))
-	# 		for face_obj_in_part in faces:
-	# 			if face_obj_in_part.pointOn[0] == face_pointOn[face_index][0]:
-	# 				cell_face_obj.append(face_obj_in_part)
-	# 				break
-	# 	# print(cell_face_obj)
-	# 	p.AddCells(faceList = cell_face_obj)
-	
-
-start = time()
-previous = time()
 
 def track_time(i):
 	global now
@@ -271,7 +204,6 @@ def track_time(i):
 	print('Creating the ' + str(i*100) + 'th polygon.')
 	print('Total elapsed time: ' + str(elapsed))
 	print('Elapsed time interval: ' + str(interval))
-
 
 def create_in_abq():
 	data = []
@@ -424,52 +356,58 @@ def simple_test():
 
 	gmsh.finalize()
 
-def abq_create(mesh_size = 0.5, display = False, ingeo = 'Voronoi_500_seed_15.geo', out_f='gmsh_test.inp'):
+def voronoi_create(mesh_size=None, display = False, to_out_f = True, to_mesh = True, in_geo = None):
 
+	out_f=config.get('process_inp', 'project_name') + '.inp'
+
+	if mesh_size == None:
+		num_part=config.getint('process_inp', 'num_particle')
+		ele_per_part=config.getint('process_inp', 'ele_per_part')
+		cell_size = np.mean(get_array('geo', 'particle_size'))
+		total_part = num_part*ele_per_part
+		mesh_size = cell_size/total_part**(1/3)
+		print('mesh size is: ' + str(mesh_size))
+	
 	# gmsh.initialize(sys.argv)
 	gmsh.initialize()
 	if display: gmsh.fltk.initialize()
 	# gmsh.option.setNumber("General.Terminal", 1)
 	gmsh.model.add("Voronoi geo")
 
-	with open(r'C:\\peter_abaqus\\Summer-Research-Project\\meep\\' + ingeo, 'rb') as f:
-		data = pickle.load(f)
+	if in_geo == None:
+		in_geo = config.get('process_inp', 'project_name') + '.geo'
 
-	vertices, unique_edge_point_list, face_index_list = data
-
+	if type(in_geo) == str:
+		with open(config.get('process_inp', 'data') + in_geo, 'rb') as f:
+			in_geo = pickle.load(f)
+	elif type(in_geo) == list:
+		pass
 	
+	vertices, unique_edge_point_list, face_index_list = in_geo
 
-	
 	geo_p = get_datum(vertices)
 	geo_l = connect_line(unique_edge_point_list, geo_p)
 	geo_f = cover_face(geo_l, face_index_list)
 	volume = fill_cell(geo_f)
 	gmsh.model.occ.synchronize()
 
-	# pnts = gmsh.model.getBoundary([(3,surf2)], True, True, True)
-	# gmsh.model.mesh.setSize(pnts, 0.2)
-
-	# gmsh.model.mesh.field.setAsBackgroundMesh()
-	# geo_p = np.array(geo_p)
-	# geo_p = np.expand_dims(geo_p,1)
-	# geo_p = np.concatenate((np.zeros_like(geo_p), geo_p), axis=1)
 	geo_p_list = []
 	for ele1 in geo_p:
 		for ele2 in ele1:
 			geo_p_list.append((0, ele2))
 
 	gmsh.model.mesh.setSize(geo_p_list, mesh_size)
-	gmsh.model.mesh.generate(3)
-	gmsh.write('gmsh_out/' + out_f)
+	if to_mesh: gmsh.model.mesh.generate(3)
+	if to_out_f: gmsh.write(config.get('process_inp', 'data') + out_f)
 
 	if display: gmsh.fltk.run()
 	gmsh.finalize()
-
+	return out_f
 
 if __name__ ==  "__main__":
 	# simple_test()
 	before = time()
-	abq_create()
+	voronoi_create()
 	after = time()
 	elapsed = after-before
 	print('the total time elapsed is ' + str(elapsed))

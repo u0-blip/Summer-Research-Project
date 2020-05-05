@@ -76,3 +76,9 @@ voronoi*.cae
 *.bdf
 *.inp
 *.eps
+data/
+*.pyc
+*.pyd
+*.geo
+*.mpout
+*.clean

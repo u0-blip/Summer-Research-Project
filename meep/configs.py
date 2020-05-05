@@ -1,26 +1,31 @@
 import configparser
 import argparse
+import numpy as np
+import os
 
-def get_args():
-    # Construct the argument parser
-    ap = argparse.ArgumentParser()
-
-    # Add the arguments to the parser
-    # ap.add_argument("-d", "--distance", required=True,
-    # help="distance between solid")
-    # ap.add_argument("-s", "--size", required=True,
-    # help="size of solid")
-    # ap.add_argument("-f", "--file", required=True,
-    # help="file to output")
-    # ap.add_argument("-v", "--visual", required=True,
-    # help="whether to visualize")
-    
-    ap.add_argument("-s", "--section", required=True,
-    help="config section")
-
-    args = vars(ap.parse_args())
-    return args
-
-args = get_args()
 config = configparser.ConfigParser()
-config.read('sim.ini')
+
+if os.name == 'nt':
+    config.read('C:\peter_abaqus\Summer-Research-Project\meep\sim.ini')
+    data_dir = config.get('process_inp', 'data')
+elif os.name == 'posix':
+    config.read('/mnt/c/peter_abaqus/Summer-Research-Project/meep/sim.ini')
+    data_dir = config.get('process_inp', 'posix_data')
+
+def get_array(section,  name, type = np.float):
+    val = config.get(section, name)
+    val = np.fromstring(val, dtype = type, sep=',')
+    return val
+
+file_name = config.get('process_inp', 'posix_data') + config.get('process_inp', 'project_name') + '.mpout'
+dist = config.getfloat('geo', 'distance')
+per_sim = config.getboolean('general', 'perform_mp_sim')    
+
+fcen = eval(config.get('source', 'fcen')) # center frequency of CW source (wavelength is 1 μm)
+
+sim_dim = config.getint('sim', 'dimension')
+cell_size = get_array('geo', 'cell_size')
+size_solid = get_array('geo', 'particle_size')
+sim_t = config.get('sim', 'type')
+res=config.getfloat('sim', 'resolution')
+project_name = config.get('process_inp', 'project_name')

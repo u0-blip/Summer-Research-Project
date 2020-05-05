@@ -1,7 +1,6 @@
 test
 .ipynb_checkpoints
-straight_waveguide.mp4
-ez.h5
-eps-000010.21.h5
-ez_small.h5
-eps-000000.00.h5
+*.mp4
+*.h5
+*.mpout
+*.clean

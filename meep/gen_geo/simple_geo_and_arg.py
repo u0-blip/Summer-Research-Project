@@ -1,6 +1,9 @@
 import numpy as np
 import argparse
-import meep as mp
+
+import os
+if os.name == 'posix':
+    import meep as mp
 from numpy import pi
 
 import sys
@@ -26,16 +29,15 @@ def rotate(origin, point, angle):
 
 num_particles = config.getint('geo', 'num_particles')
 
+
 def get_coord(dist):
     if num_particles == 1:
-        return [[config.getfloat('geo','dist_to_source'), 0, 0]]
+        return [mp.Vector3(coordsconfig.getfloat('geo','dist_to_source'), 0, 0)]
     else:
-        return [[0., dist/2., 0.],  [0., -dist/2,  0.]]
+        return [mp.Vector3(0., dist/2., 0.),  mp.Vector3(0., -dist/2,  0.)]
 
 
-def get_polygon_coord(dist, radius, num=2):
-    center = get_coord(dist)
-
+def get_polygon_coord(center, radius):
     a = np.sqrt(3)/2*radius
     shape = config.get('geo', 'shape')
     if shape == 'hexagon':
@@ -53,7 +55,7 @@ def get_polygon_coord(dist, radius, num=2):
             [a, -radius/2, 0],
             [-a, -radius/2, 0]
         ])
-        
+
     for i, p in enumerate(points):
         points[i] = rotate([0, 0, 0], p, eval(config.get('geo', 'rotation')))
 
