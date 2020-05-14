@@ -28,7 +28,7 @@ class voronoi_geo:
     def __init__(self, vor, box):
         self.num_seeds = len(vor.regions)
         self.vor = vor
-        self.points = vor.points
+        self.points = np.array(vor.og_points)
         self.vertices = self.vor.vertices
         self.random_ass()
         self.bounding_box = box
@@ -39,6 +39,13 @@ class voronoi_geo:
             self.parts_eps = [self.eps_mat[self.parts_ass[i]] for i in range(self.num_seeds)]
         else:
             self.parts_eps = None
+    
+    def inbox(self, coord):
+        b_box = self.bounding_box
+        x_in = np.logical_and(b_box[0, 0] <= coord[0], coord[0] <= b_box[0, 1])
+        y_in = np.logical_and(b_box[1, 0] <= coord[1], coord[1] <= b_box[1, 1])
+        z_in = np.logical_and(b_box[2, 0] <= coord[2], coord[2] <= b_box[2, 1])
+        return np.logical_and(np.logical_and(x_in, y_in), z_in)
 
 class checker_geo:
     num_div = 10

@@ -104,15 +104,15 @@
         
 #     return size
 
-# def gen_part_loc(num_crystal, size_solid = None, use_normal = False):
-#     if(size_solid == None):
-#         size_solid = [1, 1, 1]
+# def gen_part_loc(num_crystal, particle_size = None, use_normal = False):
+#     if(particle_size == None):
+#         particle_size = [1, 1, 1]
 #     if use_normal:
 #         mean= (0, 0, 0)
 #         cov = [[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]]
 #         loc = np.random.multivariate_normal(mean, cov, (num_crystal))
 #     else:
-#         loc = np.random.uniform(-size_solid[0]/2, size_solid[0]/2, (num_crystal, 3))
+#         loc = np.random.uniform(-particle_size[0]/2, particle_size[0]/2, (num_crystal, 3))
 #     return loc
 
 # def gen_part_rot(num_crystal):
@@ -160,9 +160,9 @@
 #     geometry = [solid_region,]
 
 #     for i in range(num_crystal):
-#         if (np.abs(loc[i, 0]) < size_solid[0] - size_crystal_base[0]/2 and 
-#         np.abs(loc[i, 1]) < size_solid[1] - size_crystal_base[1]/2 and 
-#         np.abs(loc[i, 2]) < size_solid[2] - size_crystal_base[2]/2):
+#         if (np.abs(loc[i, 0]) < particle_size[0] - size_crystal_base[0]/2 and 
+#         np.abs(loc[i, 1]) < particle_size[1] - size_crystal_base[1]/2 and 
+#         np.abs(loc[i, 2]) < particle_size[2] - size_crystal_base[2]/2):
 #             geometry.append(mp.Block(
 #                 size_crystal[i],
 #                 center = mp.Vector3(loc[i, 0], loc[i, 1], loc[i, 2]),
@@ -172,8 +172,8 @@
 #                 material=mp.Medium(epsilon=10.5)))
 #     return geometry
 
-# def out_para_geo(file_name, num_crystal, size_solid_l, size_crystal_l, loc, theta):
-#     to_write = [num_crystal, size_solid_l, size_crystal_l, loc, theta]
+# def out_para_geo(file_name, num_crystal, particle_size_l, size_crystal_l, loc, theta):
+#     to_write = [num_crystal, particle_size_l, size_crystal_l, loc, theta]
 #     for i in range(len(to_write)):
 #         if type(to_write[i]) is not int and type(to_write[i]) is not list:
 #             to_write[i] = to_write[i].tolist()
@@ -225,7 +225,7 @@
 #     print(one_cube_3d.shape)
 
 # size_cell = [1.5, 1.5, 1.5]
-# size_solid = [1, 1, 1]
+# particle_size = [1, 1, 1]
 # size_crystal_base = [0.1, 0.1, 0.1]
 # num_crystal = 200
 # np.random.seed(15)
@@ -235,7 +235,7 @@
 
 # pml_layers = [mp.PML(0.3)]
 
-# solid_region = mp.Block(size_solid, 
+# solid_region = mp.Block(particle_size, 
 #                     center = mp.Vector3(0, 0, 0),
 #                     material=mp.Medium(epsilon=10))
 # geometry = [solid_region,]

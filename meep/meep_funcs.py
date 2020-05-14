@@ -45,14 +45,9 @@ def pass_vor(func, vor):
     return wrapper
 
 def my_eps(my_vor, coord):
-    b_box = my_vor.bounding_box
+    inbox = my_vor.inbox(coord)
 
-    x_in = np.logical_and(b_box[0, 0] <= coord[0], coord[0] <= b_box[0, 1])
-    y_in = np.logical_and(b_box[1, 0] <= coord[1], coord[1] <= b_box[1, 1])
-    z_in = np.logical_and(b_box[2, 0] <= coord[2], coord[2] <= b_box[2, 1])
-    in_box = np.logical_and(np.logical_and(x_in, y_in), z_in)
-
-    if in_box:
+    if inbox:
         return my_vor.parts_eps[closest_node([coord[0],coord[1],coord[2]], my_vor.points)]
     else:
         return air
@@ -102,15 +97,15 @@ def gen_part_size(num_crystal, size_crystal_base, weibull = True):
         
     return size
 
-def gen_part_loc(num_crystal, size_solid = None, use_normal = False):
-    if(size_solid == None):
-        size_solid = [1, 1, 1]
+def gen_part_loc(num_crystal, particle_size = None, use_normal = False):
+    if(particle_size == None):
+        particle_size = [1, 1, 1]
     if use_normal:
         mean= (0, 0, 0)
         cov = [[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]]
         loc = np.random.multivariate_normal(mean, cov, (num_crystal))
     else:
-        loc = np.random.uniform(-size_solid[0]/2, size_solid[0]/2, (num_crystal, 3))
+        loc = np.random.uniform(-particle_size[0]/2, particle_size[0]/2, (num_crystal, 3))
     return loc
 
 def gen_part_rot(num_crystal):
@@ -158,9 +153,9 @@ def gen_particle_geo(loc, theta_x, theta_y, theta_z):
     geometry = [solid_region,]
 
     for i in range(num_crystal):
-        if (np.abs(loc[i, 0]) < size_solid[0] - size_crystal_base[0]/2 and 
-        np.abs(loc[i, 1]) < size_solid[1] - size_crystal_base[1]/2 and 
-        np.abs(loc[i, 2]) < size_solid[2] - size_crystal_base[2]/2):
+        if (np.abs(loc[i, 0]) < particle_size[0] - size_crystal_base[0]/2 and 
+        np.abs(loc[i, 1]) < particle_size[1] - size_crystal_base[1]/2 and 
+        np.abs(loc[i, 2]) < particle_size[2] - size_crystal_base[2]/2):
             geometry.append(mp.Block(
                 size_crystal[i],
                 center = mp.Vector3(loc[i, 0], loc[i, 1], loc[i, 2]),
@@ -170,8 +165,8 @@ def gen_particle_geo(loc, theta_x, theta_y, theta_z):
                 material=mp.Medium(epsilon=10.5)))
     return geometry
 
-def out_para_geo(file_name, num_crystal, size_solid_l, size_crystal_l, loc, theta):
-    to_write = [num_crystal, size_solid_l, size_crystal_l, loc, theta]
+def out_para_geo(file_name, num_crystal, particle_size_l, size_crystal_l, loc, theta):
+    to_write = [num_crystal, particle_size_l, size_crystal_l, loc, theta]
     for i in range(len(to_write)):
         if type(to_write[i]) is not int and type(to_write[i]) is not list:
             to_write[i] = to_write[i].tolist()
@@ -219,7 +214,7 @@ def index2coord(index, size_arr, size_geo):
 
 
 
-def create_simple_geo(geometry, coords, shape, size_solid, prism_height=0, prism_axis=(0,0,1)):
+def create_simple_geo(geometry, coords, shape, particle_size, prism_height=0, prism_axis=(0,0,1)):
     if config.get('sim', 'type') != 'checker':
         coords = get_coord(config.getfloat('geo', 'distance'))
     else:
@@ -229,7 +224,7 @@ def create_simple_geo(geometry, coords, shape, size_solid, prism_height=0, prism
         for i, coord in enumerate(coords):
             geometry.append(
                 mp.Block(
-                    size_solid, 
+                    particle_size, 
                     center = coord,
                     material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4)
                     )
@@ -238,7 +233,7 @@ def create_simple_geo(geometry, coords, shape, size_solid, prism_height=0, prism
         for i, coord in enumerate(coords):
             geometry.append(
                 mp.Sphere(
-                    radius = size_solid, 
+                    radius = particle_size, 
                     center = coord,
                     material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4)
                     )
@@ -247,13 +242,13 @@ def create_simple_geo(geometry, coords, shape, size_solid, prism_height=0, prism
         for i, coord in enumerate(coords):
             geometry.append(
                 mp.Ellipsoid(
-                    size_solid, 
+                    particle_size, 
                     center = coord,
                     material=mp.Medium(epsilon=7.69, D_conductivity=2*math.pi*0.42*2.787/3.4)
                     )
             )
     if shape == "hexagon" or shape == 'triangle':
-        p_coords = get_polygon_coord(coords, config.getfloat('geo','particle_radius'))
+        p_coords = get_polygon_coord(coords)
         for i, coord in enumerate(p_coords):
             geometry.append(
                 mp.Prism(

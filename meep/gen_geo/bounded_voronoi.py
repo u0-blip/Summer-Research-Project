@@ -1,3 +1,4 @@
+from configs import *
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
@@ -9,15 +10,12 @@ from .convex_hull import *
 from .geo_classes import voronoi_geo
 sys.path.append('..')
 
-from configs import config, get_array
 
 eps = sys.float_info.epsilon
 
-particle_size = get_array('geo', 'particle_size')
-half_particle_size= particle_size/2
-half_particle_size = np.expand_dims(half_particle_size, 1)
-bounding_box = np.concatenate((-half_particle_size, half_particle_size), axis=1)
-
+bounding_box = np.expand_dims(vor_size, 1)
+bounding_box = np.concatenate((-bounding_box/2, bounding_box/2), axis=1)
+bounding_box = (bounding_box.transpose() + vor_center).transpose()
 
 def in_box(towers, bounding_box):
     x_in = np.logical_and(bounding_box[0, 0] <= towers[:, 0], towers[:, 0] <= bounding_box[0, 1])
@@ -84,7 +82,7 @@ def generateBoundedVor(towers, bounding_box):
             regions.append(region)
 
 
-    vor.filtered_points = points_center
+    vor.og_points = points_center
     vor.regions = regions
     return vor
 
@@ -96,7 +94,7 @@ def del_bad_poly_ratio(vor, hull):
         ratio = dist/(hull[i].volume**(1/3.))
         # print(ratio)
         if ratio <= 2.2:
-            seed_of_regions_to_keep.append(vor.filtered_points[i])
+            seed_of_regions_to_keep.append(vor.og_points[i])
 
     # print('points is ')
     # print(len(seed_of_regions_to_keep))
@@ -213,20 +211,15 @@ def plot_vor(vor_vertices, regions):
 
 
 def b_voronoi(to_out_geo = True):
-    global config
-    data_dir = config.get('process_inp', 'posix_data')
 
-    n_towers = config.getint('process_inp', 'num_particle')
+    n_towers = config.getint('vor', 'num_particle')
+    np.random.seed(config.getint('vor', 'rand_seed'))
 
-    np.random.seed(config.getint('process_inp', 'rand_seed'))
-    file_name = config.get('process_inp', 'project_name') + '.geo'
-    vor_name = config.get('process_inp', 'project_name') + '.vor'
-
-    particle_size = get_array('geo', 'particle_size')
     v_seed_points = np.random.rand(n_towers, 3) - 0.5
 
     for i in range(3):
-        v_seed_points[:, i] *= particle_size[i]
+        v_seed_points[:, i] *= vor_size[i] 
+        v_seed_points[:, i] += vor_center[i]
 
     vor = generateBoundedVor(v_seed_points, bounding_box) 
 
@@ -246,18 +239,18 @@ def b_voronoi(to_out_geo = True):
 
     geo = [hull_seed_points, unique_edge_list, face_index_list]
 
-    my_voronoi_geo = voronoi_geo(vor=vor, box = bounding_box)
+    complete_vor = voronoi_geo(vor=vor, box = bounding_box)
     
     if to_out_geo: 
-        with open(data_dir + file_name, 'wb') as f:
+        with open(data_dir + project_name + '.geo', 'wb') as f:
             pickle.dump(geo, f)
-        with open(data_dir + vor_name, 'wb') as f:
-            pickle.dump([vor, my_voronoi_geo], f)
-        with open(data_dir + config.get('process_inp', 'project_name')+'.partass', 'wb') as f:
-            pickle.dump(my_voronoi_geo.parts_ass, f)
+        with open(data_dir + project_name + '.vor', 'wb') as f:
+            pickle.dump([vor, complete_vor], f)
+        with open(data_dir + project_name +'.partass', 'wb') as f:
+            pickle.dump(complete_vor.parts_ass, f)
     
     print('created ' + str(len(vor.regions)) + ' polygons')
-    return vor, my_voronoi_geo, geo
+    return vor, complete_vor, geo
 
 if __name__ == "__main__":
     n_towers = 30

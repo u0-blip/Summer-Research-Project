@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "/home/peter/anaconda3/envs/pmp/bin/python"
+    "python.pythonPath": "/home/peter/anaconda3/envs/pmp/bin/python",
+    "python.autoComplete.extraPaths": ["C:\\peter_abaqus\\Summer-Research-Project\\meep", "/mnt/c/peter_abaqus/Summer-Research-Project/meep"]
 }

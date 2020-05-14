@@ -37,7 +37,8 @@ def get_coord(dist):
         return [mp.Vector3(0., dist/2., 0.),  mp.Vector3(0., -dist/2,  0.)]
 
 
-def get_polygon_coord(center, radius):
+def get_polygon_coord(center):
+    radius = config.getfloat('geo','particle_radius')
     a = np.sqrt(3)/2*radius
     shape = config.get('geo', 'shape')
     if shape == 'hexagon':
@@ -59,15 +60,14 @@ def get_polygon_coord(center, radius):
     for i, p in enumerate(points):
         points[i] = rotate([0, 0, 0], p, eval(config.get('geo', 'rotation')))
 
-    points = np.expand_dims(points, 0)
-    points += center[0]
+    og_points = points
 
-    for i in range(1, len(center)):
-        points = np.concatenate((points, points + center[i] - center[i-1]), 0)
-    
-    vertices = [[] for i in range(num_particles)]
-    for i in range(num_particles):
-        for j in range(points.shape[1]):
-            vertices[i].append(mp.Vector3(*points[i,j,:]))
+    vertices = []
+    for i in range(len(center)):
+        p = og_points + center[i]
+        vertices.append([])
+        for pp in p:
+            vertices[i].append(mp.Vector3(pp[0], pp[1], pp[2]))
+
     return vertices
 
