@@ -1,0 +1,2 @@
+slurmstepd: error: *** JOB 6069975 ON hc07 CANCELLED AT 2020-06-19T19:18:13 DUE TO TIME LIMIT ***
+slurmstepd: error: Detected 10481 oom-kill event(s) in step 6069975.batch cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
