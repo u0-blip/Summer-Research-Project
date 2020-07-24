@@ -103,8 +103,8 @@ def gaussian_beam(sigma, k, x0):
 
 
 def source_wrapper():
-    s = get_array('source', 'size')
-    center = get_array('source', 'center')
+    s = get_array('source', 'size', config)
+    center = get_array('source', 'center', config)
     dim = config.getfloat('sim', 'dimension')
     if sim_dim == 2:
         s[0] = 0
@@ -117,6 +117,7 @@ def source_wrapper():
 
     mode = config.get('source', 'mode')
     fwidth = config.getfloat('source', 'fwidth')
+    fcen = config.getfloat('source', 'fcen')
     if not config.getboolean('sim', 'calc_flux'):
         pre_source = mp.ContinuousSource(
             fcen, fwidth=fwidth*fcen, is_integrated=True)
@@ -441,7 +442,7 @@ def get_area(eps_data):
 def get_mean_std(ez_data, ez_trans, eps):
 
     s = eps.shape
-    cell_size = get_array('geo', 'cell_size')
+    cell_size = get_array('geo', 'cell_size', config)
 
     res_block = [-3, 3, -3, 3]
     t = translate(-cell_size[0]/2, cell_size[1]/2, 0, s[0])
@@ -473,6 +474,7 @@ def get_mean_std(ez_data, ez_trans, eps):
     return [mean, std]
 
 def viz_res(ez_data, ez_trans, eps):
+    global cell_size
     res = config.getfloat('sim', 'resolution')
     X = np.arange(-cell_size[0]/2, cell_size[0]/2, 1/res)
     Y = np.arange(-cell_size[1]/2, cell_size[1]/2, 1/res)
@@ -510,7 +512,7 @@ def viz_res(ez_data, ez_trans, eps):
         if config.getboolean('visualization', 'rms'):
             out_every = config.getfloat('sim', 'out_every')
             time_sim = config.getfloat('sim', 'time')
-            cell_size = get_array('geo', 'cell_size')
+            cell_size = get_array('geo', 'cell_size', config)
 
             if len(ez_data.shape) == 3:
                 start = int(cell_size[0]*2/out_every*3)
@@ -535,7 +537,7 @@ def viz_res(ez_data, ez_trans, eps):
 
                 fig = plt.figure(figsize=(8, 6))
 
-                cbar_scale = get_array('visualization', 'cbar_scale')
+                cbar_scale = get_array('visualization', 'cbar_scale', config)
 
                 if not view_only_particles:
                     ax = plt.axes()
@@ -664,7 +666,7 @@ def wsl_main():
     param_cat = ['geo', 'geo', 'geo', 'geo', 'geo', 'geo', 'geo', 'geo']
 
     for cat, name in zip(param_cat, param_names):
-        temp = list(get_array(cat, name))
+        temp = list(get_array(cat, name, config))
         temp[-1] = int(temp[-1])
         params.append(temp)
 
@@ -701,7 +703,12 @@ def wsl_main():
             iter_vars_index.append(i)
 
     iter_vars_ele = np.array(iter_vars_ele)
-    iter_vars_size = iter_vars_ele[:, -1].astype(np.int)
+    
+    if len(iter_vars_ele) > 0:
+        iter_vars_size = iter_vars_ele[:, -1].astype(np.int)
+    else:
+        iter_vars_size = [1]
+
 
 
     if config.getboolean('general', 'perform_mp_sim'):

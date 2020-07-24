@@ -1,14 +1,15 @@
 import sys
 import os
 import multiprocessing as mproc
-from multiprocessing import get_context
 
 sys.path.append(os.getcwd())
 
+from copy import deepcopy
 import random
 import math
 import cmath
 import numpy as np
+import pandas as pd
 from time import time
 import pickle
 import traceback
@@ -113,7 +114,8 @@ def source_wrapper():
 
     mode = config.get('source', 'mode')
     fwidth = config.getfloat('source', 'fwidth')
-    fcen = config.getfloat('source', 'fcen')
+    fcen = eval(config.get('source', 'fcen')) # center frequency of CW source (wavelength is 1 μm)
+
     if not config.getboolean('sim', 'calc_flux'):
         pre_source = mp.ContinuousSource(
             fcen, fwidth=fwidth*fcen, is_integrated=True)
@@ -218,22 +220,18 @@ def get_fluxes(sim, basic_sim, sides, basic_sides):
 
     return ez_data
 
-def cut(cell_size, center, geo, eps=None, mat=None):
-    if eps != None:
-        mat = mp.Medium(epsilon=eps)
+def cut(cell_size, center, eps, geo):
     for i in range(len(center)):
         geo.append(
             mp.Block(
                 cell_size,
                 center=mf.np2mp(center[i]),
-                material=mat
+                material=mp.Medium(epsilon=eps)
             )
         )
 
 def gen_geo_and_sim(vor, config1):
     # dimensions = mp.CYLINDRICAL
-    
-    # mp.quiet(True)
     global config
     config = config1
 
@@ -265,37 +263,16 @@ def gen_geo_and_sim(vor, config1):
         else:
             geo = []
 
-        if config.get('sim', 'type') == 'checker':
-            cut(cell_size, [mp.Vector3(-2, 0, 0)], geo, eps=1)
-            # cut(cell_size, center_matrix, geo, eps = effictive_median)
+        if config.get('sim', 'sim') == 'checker':
+            cut(cell_size, [mp.Vector3(-2, 0, 0)], 1, geo)
+            # cut(cell_size, center_matrix, effictive_median, geo)
 
-        # if type_s == 'shape' or type_s == 'checker':
-        #     geo = mf.create_simple_geo(geo, config)
-        # else:
-        #     geo = vor
+        if type_s == 'shape' or type_s == 'checker':
+            geo = mf.create_simple_geo(geo, config)
+        else:
+            geo = vor
 
-        geo = []
-
-
-        eps = config.getfloat('geo', 'eps')
-        eps_i = config.getfloat('geo', 'eps_i')
-        fcen = config.getfloat('source', 'fcen')
-        ff = config.getfloat('geo', 'fill_factor')
-
-        eps_olivate = complex(7.27, 0.0685)
-        eps_A = complex(1, 0)
-        A = 2
-        B = (1-3*ff)*eps_olivate-(2-3*ff)*eps_A
-        C = -eps_A*eps_olivate
-        res = (-B+np.sqrt(B**2-4*A*C))/(2*A)
-        eps = res.real
-        eps_i = res.imag
-
-        mat = mp.Medium(epsilon=eps, D_conductivity=2*math.pi*fcen*eps_i/eps)
-
-        cut(mp.Vector3(8, 8, 0), [[-1, 0, 0]], geo, mat = mat)
-
-        cut(cell_size, center, geo, eps=1)
+        cut(cell_size, center, 1, geo)
 
         eps_sim = create_sim(geo=geo)
 
@@ -342,12 +319,11 @@ def gen_geo_and_sim(vor, config1):
         print('The RMS matrix shape: ' + str(ez_data.shape))
 
 
-        # write_windows(ez_data, plot_f_name(config) + '_2D.ez')
-        with open(plot_f_name(config) + '_2D.ez', 'wb') as f:
-            pickle.dump([ez_data, ez_trans, eps_data, config], f)
-            
+        # write_windows(ez_data, plot_f_name() + '_3D.ez')
         # write_windows(eps_data, data_dir + project_name + '.eps')
         mean_std = get_mean_std(ez_data, ez_trans, eps_data)
+    
+    print('config tran', config.getboolean('visualization', 'transiant'))
 
     if config.getboolean('visualization', 'transiant') or config.getboolean('visualization', 'rms'):
         viz_res(ez_data, ez_trans, eps_data, config)
@@ -412,7 +388,7 @@ def sim_run_wrapper(sim, eps_data):
             self.start = start
             self.ass = ass
             self.ttt = ttt
-        ez_data_inted, ez_data, counter, overall_count, start, ass
+        # ez_data_inted, ez_data, counter, overall_count, start, ass
     ref = ref_to_vars()
     
     def f1(sim):
@@ -422,7 +398,7 @@ def sim_run_wrapper(sim, eps_data):
         sim.run(mp.at_every(out_every, f1),
                 until=config.getfloat('sim', 'time'))
     else:
-        pt = mf.np2mp(get_array('source', 'near_flux_loc'))
+        pt = mf.np2mp(get_array('source', 'near_flux_loc', config))
         sim.run(mp.at_every(out_every, f1),
                 until_after_sources=mp.stop_when_fields_decayed(50, mp.Ez, pt, 1e-3))
     
@@ -437,17 +413,22 @@ def get_mean_std(ez_data, ez_trans, eps):
 
     s = eps.shape
     cell_size = get_array('geo', 'cell_size', config)
-
-    res_block = [-3, 3, -3, 3]
-    t = translate(-cell_size[0]/2, cell_size[1]/2, 0, s[0])
-    res_block_index = [int(t(ele)) for ele in res_block]
+    eps_const = config.getfloat('geo', 'eps')
     
-    res_block_mat = np.zeros_like(eps)
-    res_block_mat[res_block_index[0]:res_block_index[1], res_block_index[2]:res_block_index[3]] = 1
-
-    # eps_rock = np.logical_and((eps > 7.69), res_block_mat)
-    eps_rock = res_block_mat.astype(np.bool)
+    eps_rock = eps >= eps_const
     
+    if config.get('sim', 'sim_types') == 'checker':
+        res_block = [-3, 3, -3, 3]
+        t = translate(-cell_size[0]/2, cell_size[1]/2, 0, s[0])
+        res_block_index = [int(t(ele)) for ele in res_block]
+        
+        res_block_mat = np.zeros_like(eps)
+        res_block_mat[res_block_index[0]:res_block_index[1], res_block_index[2]:res_block_index[3]] = 1
+
+        eps_rock = np.logical_and(eps_rock, res_block_mat)
+    else:
+        pass
+
     ez_data[np.logical_not(eps_rock)] = 0
 
     res = config.getfloat('sim', 'resolution')
@@ -525,10 +506,17 @@ def win_main():
             after = time()
             elapsed = after-before
             print('Time for clean array is ' + str(elapsed))
- 
-def wsl_main():
 
-    if config.get('sim', 'type') == 'voronoi':
+def wsl_main(web_config=None):
+    mp.quiet(True)
+
+    global config
+
+    if web_config:
+        config = deepcopy(web_config)
+
+    if config.get('sim', 'sim') == 'voronoi':
+        last = time()
         if config.getboolean('general', 'gen_vor'):
             _, complete_vor, geo = b_voronoi(to_out_geo=True)
         else:
@@ -553,6 +541,7 @@ def wsl_main():
 
     for cat, name in zip(param_cat, param_names):
         temp = list(get_array(cat, name, config))
+
         temp[-1] = int(temp[-1])
         params.append(temp)
 
@@ -573,12 +562,14 @@ def wsl_main():
 
     # with mproc.Pool(processes=config.getint('general', 'sim_cores')) as pool:
     #     mean_std_area_value = pool.map(func, configs)
-        # counter += 1
-        # print(counter, ' out of ', total, ' is done.')
+    #     counter += 1
+    #     print(counter, ' out of ', total, ' is done.')
 
     mean_std_area_value = []
-    for c in configs:
-        mean_std_area_value.append(func(c))
+    for i, c in enumerate(configs):
+        res = func(c)
+        mean_std_area_value.append(res)
+        yield i, total, res
 
     iter_vars_ele = []
     iter_vars_index = []
@@ -588,10 +579,12 @@ def wsl_main():
             iter_vars_index.append(i)
 
     iter_vars_ele = np.array(iter_vars_ele)
+    
     if len(iter_vars_ele) > 0:
         iter_vars_size = iter_vars_ele[:, -1].astype(np.int)
     else:
         iter_vars_size = [1]
+
     if config.getboolean('general', 'perform_mp_sim'):
         areas = []
         mean_stds = []
@@ -604,12 +597,23 @@ def wsl_main():
         mean_stds = np.array(mean_stds)
         mean_stds = mean_stds.reshape(*iter_vars_size, 2)
         
-    to_write = {
+    data = {
         'param names': [param_names[i] for i in iter_vars_index], 
         'iter vals': iter_vars_ele, 
         'std mean' : mean_stds,
         'area' : areas
         }
+    mean = np.take(mean_stds, 0, -1)
+    std = np.take(mean_stds, 1, -1)
+    mean, std = pd.DataFrame(mean), pd.DataFrame(std)
+    
+    if len(iter_vars_ele) > 1:
+        mean.columns = np.linspace(iter_vars_ele[1, 0], iter_vars_ele[1, 1], int(iter_vars_ele[1, 2]))
+
+        mean.index = np.linspace(iter_vars_ele[0, 0], iter_vars_ele[0, 1], int(iter_vars_ele[0, 2]))
+
+        std.columns = mean.columns
+        std.index = mean.index
 
     var_descrip_str = ''
     if len(iter_vars_ele) != 0:
@@ -618,8 +622,25 @@ def wsl_main():
         for i, p in zip(iter_vars_index, iter_vars_ele):
             var_descrip_str += param_names[i] + '_' + str('_'.join([str(p) for p in params[i]]))
 
-    with open(plot_f_name(config) + '_' + var_descrip_str + 'eps_rock_1.std', 'wb') as f:
-        pickle.dump(to_write, f)
+    # with open(plot_f_name(config) + '_' + var_descrip_str + '.csv', 'wb') as f:
+    #     # pickle.dump(to_write, f)
+    #     to_write.to_excel("output.xlsx") 
+
+    # with pd.ExcelWriter(plot_f_name(config) + '_' + var_descrip_str + '.xlsx') as writer:  
+    #     mean.to_excel(writer, sheet_name='mean')
+    #     std.to_excel(writer, sheet_name='std')
+
+
+    output = io.BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    mean.to_excel(writer, sheet_name='mean')
+    std.to_excel(writer, sheet_name='std')
+    import redis
+    r = redis.Redis(host = 'localhost', port = 6379, db=0)
+    output.seek(0)
+    r.set('Current result', output.read())
+    output.close()
+    # writer.close()
 
 
 if __name__ == "__main__":

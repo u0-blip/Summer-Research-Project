@@ -8,8 +8,8 @@ import pickle
 from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting 
 from .convex_hull import *
 from .geo_classes import voronoi_geo
-sys.path.append('..')
 
+sys.path.append('..')
 
 eps = sys.float_info.epsilon
 

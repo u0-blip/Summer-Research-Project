@@ -230,7 +230,7 @@ def gen_checker(size_cell, dim=2):
     checker_coord = []
     particle_size = config.getfloat('geo', 'particle_size')
     radius = get_rad(particle_size)
-    size_cell = get_array('geo', 'cell_size')
+    size_cell = get_array('geo', 'cell_size', config)
     ff = config.getfloat('geo', 'fill_factor')
     r_sub_cell = np.sqrt((1/ff)*particle_size)
     size_cell -= 2
@@ -279,7 +279,7 @@ def create_simple_geo(geometry, config1):
     if sim_type == 'shape':
         coords = get_coord(radius, config)
     elif sim_type == 'checker':
-        cell_size = get_array('geo', 'cell_size')
+        cell_size = get_array('geo', 'cell_size', config)
         coords = gen_checker(cell_size, sim_dim) 
 
     if config.get('geo','particle_size_t') == 'gaussian' and sim_type=='checker':
