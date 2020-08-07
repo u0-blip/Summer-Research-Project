@@ -2,5 +2,10 @@
     "python.autoComplete.extraPaths": [
         "C:\\peter_abaqus\\Summer-Research-Project\\meep",
         "/mnt/c/peter_abaqus/Summer-Research-Project/meep"
+    ],
+    "python.linting.pylintEnabled": true,
+    "python.linting.pylintArgs": [
+        "--enable=W0614"
     ]
 }
+

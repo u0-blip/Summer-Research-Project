@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.gridspec as gridspec
 import matplotlib.animation as animation
 import matplotlib.colors as colors
-from my_meep.configs import *
+from my_meep.config.configs import *
 
 import numpy as np
 import matplotlib.pyplot as plt

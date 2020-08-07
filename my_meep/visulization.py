@@ -13,15 +13,15 @@ import io
 from functools import partial
 from copy import deepcopy
 import redis
+import cv2
 
 sys.path.append(os.getcwd())
 
-from my_meep.meep_funcs import read_windows, write_windows
+from my_meep.gen_geo_helper import read_windows, write_windows
 from my_meep.animator import my_animate, my_rms_plot, plot_3d
-from my_meep.helper import translate, plot_f_name, get_offset
-from my_meep.configs import *
+from my_meep.helper import Translate, plot_f_name, get_offset
+from my_meep.config.configs import *
 
-config = None
 
 def process_data(ez_data, eps, config):
     res = config.getfloat('sim', 'resolution')
@@ -39,33 +39,32 @@ def process_data(ez_data, eps, config):
 
     return ez_data, eps
 
-def D2_plot(ez_data, ez_trans, eps, config, web):
+def plot_2d(ez_data, eps, config, web):
     global cell_size
     res = config.getfloat('sim', 'resolution')
+    out_every = config.getfloat('sim', 'out_every')
+    time_sim = config.getfloat('sim', 'time')
+    cell_size = get_array('geo', 'cell_size', config)
+
     X = np.arange(-cell_size[0]/2, cell_size[0]/2, 1/res)
     Y = np.arange(-cell_size[1]/2, cell_size[1]/2, 1/res)
     X, Y = np.meshgrid(X, Y)
 
     if np.max(eps) - np.min(eps) > 0.1:
-        trans = translate(np.min(eps), np.max(eps), 0, 254)
-        vtrans = np.vectorize(trans)
+        translate = Translate(np.min(eps), np.max(eps), 0, 254)
+        vtrans = np.vectorize(translate)
         eps = vtrans(eps).astype(np.uint8)
-        import cv2
         eps_edges = cv2.Canny(eps, 10, 20).astype(np.bool)
     else:
         eps_edges = []
     eps_rock = eps >= 7.69
 
-    if config.getboolean('visualization', 'transiant') and config.getboolean('general', 'perform_mp_sim'):
-        ez_trans = ez_trans.transpose()
-        ez_trans = np.moveaxis(ez_trans, -1, 0)
-        my_animate(ez_trans, window=1)
+    # if config.getboolean('visualization', 'transiant') and config.getboolean('general', 'perform_mp_sim'):
+    #     ez_trans = ez_trans.transpose()
+    #     ez_trans = np.moveaxis(ez_trans, -1, 0)
+    #     my_animate(ez_trans, window=1)
 
     if config.getboolean('visualization', 'rms'):
-        out_every = config.getfloat('sim', 'out_every')
-        time_sim = config.getfloat('sim', 'time')
-        cell_size = get_array('geo', 'cell_size', config)
-
         if len(ez_data.shape) == 3:
             start = int(cell_size[0]*2/out_every*3)
 
@@ -86,7 +85,7 @@ def D2_plot(ez_data, ez_trans, eps, config, web):
                 ez_data[np.logical_not(eps_rock)] = 0
             else:
                 # ez_data[eps_edges] = np.max(ez_data)*0.8
-                ez_data[eps_edges] = 5
+                if not isinstance(eps_edges, list): ez_data[eps_edges.transpose()] = 5
 
             fig = plt.figure(figsize=(7, 6))
 
@@ -95,7 +94,7 @@ def D2_plot(ez_data, ez_trans, eps, config, web):
             if not view_only_particles:
                 ax = plt.axes()
                 graph = plt.pcolor(X, Y, ez_data,
-                    vmin=0, vmax=0.5)
+                    vmin=0, vmax=0.3)
                 cb = fig.colorbar(graph, ax=ax)
                 cb.set_label(label='E^2 (V/m)^2',
                                 size='xx-large', weight='bold')
@@ -112,49 +111,54 @@ def D2_plot(ez_data, ez_trans, eps, config, web):
                                         :ax_index_lim[3]], ez_data[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2]:ax_index_lim[3]], cmap=cm.coolwarm, linewidth=0, antialiased=False)
 
             ax.tick_params(axis='both', which='major', labelsize=20)
-
-            if not web: plt.savefig(plot_f_name(config) + '_rms.png', dpi=300, bbox_inches='tight')
+            plt.title('Fill Factor is ' + config.get('geo','fill_factor'), fontsize=20)
+            
             # plt.show()
 
-def viz_res(ez_data, ez_trans, eps, _config):
+class Save_img():
+    r = redis.Redis(host='localhost', port=6379, db=0)
+    web = True
+
+    def __call__(self, name):
+        if self.web:
+            bytes_image = io.BytesIO()
+            plt.savefig(bytes_image, format='png')
+            bytes_image.seek(0)
+            self.r.set(name, bytes_image.read())
+        else:
+            # save to local dir
+            plt.savefig(plot_f_name(config) + name + '.png', dpi=300, bbox_inches='tight')
+
+save_img = Save_img()
+
+def viz_res(ez_data, eps):
     global config
     global cell_size
 
-    web = False
-    config = _config
-    
+    web = True
+
     ez_data, eps = process_data(ez_data, eps, config)
 
-    print('particle area is ', np.mean(eps))
-
     if len(eps.shape) == 2:
-        D2_plot(ez_data, ez_trans, eps, config, web)
+        plot_2d(ez_data, eps, config, web)
     else:
         offset, offset_index = get_offset(ez_data)
         plot_3d(ez_data, offset, offset_index)
-        # plt.show()
-        if not web: plt.savefig(plot_f_name(config) + '3D_rms.png', dpi=300, bbox_inches='tight')
-    
-    if web:
-        r = redis.Redis(host='localhost', port=6379, db=0)
-        bytes_image = io.BytesIO()
-        plt.savefig(bytes_image, format='png')
-        print('write figure')
-        bytes_image.seek(0)
-        r.set('RMS image', bytes_image.read())
 
-def viz_struct(sim, sim_dim, eps_data, _config):
+    save_img('rms')
+
+
+def viz_struct(sim, sim_dim, eps_data):
     global config
-    config = _config
     
     if sim_dim == 2:
         plt.figure()
         sim.plot2D()
-        plt.savefig(plot_f_name(config) + 'struct.png', dpi=300, bbox_inches='tight')
     else:
         offset, offset_index = get_offset(eps_data)
         plot_3d(eps_data, offset, offset_index)
 
+    save_img('structure')
 
 if __name__ == '__main__':
     ez_data = read_windows('/mnt/c/peter_abaqus/Summer-Research-Project/output/export/' + 'cube_r_1.0_gap_4.5_xloc_3.8_fcen_0.8167_ff_0.5_3D.ez')

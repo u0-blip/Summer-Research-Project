@@ -1,7 +1,7 @@
-config = None
 import os
+from my_meep.config.configs import *
 
-class translate:
+class Translate:
     def __init__(self, leftMin, leftMax, rightMin, rightMax):
         # Figure out how 'wide' each range is
         self.leftMin = leftMin
@@ -18,9 +18,9 @@ class translate:
         # Convert the 0-1 range into a value in the right range.
         return self.rightMin + (valueScaled * self.rightSpan)
 
-def plot_f_name(_config): 
+def plot_f_name(): 
     global config
-    config = _config
+    
     name_var = [('geo', 'shape'), ('geo', 'particle_size'), ('geo', 'distance'), ('geo', 'x_loc'), ('source', 'fcen'), ('geo', 'fill_factor'), ('geo', 'rotation')]
     name_discr = ['', 'r', 'gap', 'xloc', 'fcen', 'ff', 'rt']
     name = ''
