@@ -7,7 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import io
 
 from my_meep.config.configs import *
-from my_meep.helper import Translate, plot_f_name
+from my_meep.helper import Translate, output_file_name
 from my_meep.gen_geo_helper import read_windows, write_windows
 
 def process_meep_arr(arr=None):
@@ -95,7 +95,7 @@ def write_res(web_config, data, var_descrip_str):
     write result to file or redis database base on the configuration
     """
     if not web_config:
-        with pd.ExcelWriter(plot_f_name() + '_' + var_descrip_str + '.xlsx') as writer:  
+        with pd.ExcelWriter(output_file_name() + '_' + var_descrip_str + '.xlsx') as writer:  
             data[0].to_excel(writer, sheet_name='mean')
             data[1].to_excel(writer, sheet_name='std')
             data[2].to_excel(writer, sheet_name='area')

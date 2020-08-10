@@ -41,17 +41,17 @@ f_names = [
 
 for f_name in f_names:
     dir = '/mnt/c/peter_abaqus/Summer-Research-Project/output/export/3/'
-    plot_f_name = dir + f_name + '.ez'
+    output_file_name = dir + f_name + '.ez'
 
-    # data = read_windows(plot_f_name)
+    # data = read_windows(output_file_name)
     from visulization import viz_res, viz_struct
 
-    with open(plot_f_name, 'rb') as f:
+    with open(output_file_name, 'rb') as f:
         ez_data, ez_trans, eps_data, config = pickle.load(f)
 
     viz_res(ez_data, ez_trans, eps_data, config)
 
-# with open(plot_f_name, 'rb') as f:
+# with open(output_file_name, 'rb') as f:
 #     all_data = pickle.load(f)
 
 

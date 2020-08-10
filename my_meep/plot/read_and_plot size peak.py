@@ -28,9 +28,9 @@ b, a = signal.butter(2, 0.4, 'low', analog=False)
 # datas = []
 # for f_name in f_names:
 #     dir = '/mnt/c/peter_abaqus/Summer-Research-Project/output/export/3/'
-#     plot_f_name = dir + f_name + '.std'
+#     output_file_name = dir + f_name + '.std'
 
-#     with open(plot_f_name, 'rb') as f:
+#     with open(output_file_name, 'rb') as f:
 #         all_data = pickle.load(f)
 
 #     param_name = all_data[0]

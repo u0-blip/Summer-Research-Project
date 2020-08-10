@@ -20,9 +20,9 @@ f_name = args.name
 
 
 dir = '/mnt/c/peter_abaqus/Summer-Research-Project/output/export/3/'
-plot_f_name = dir + f_name + '.std'
+output_file_name = dir + f_name + '.std'
 
-with open(plot_f_name, 'rb') as f:
+with open(output_file_name, 'rb') as f:
     all_data = pickle.load(f)
 
 param_name = all_data['param names']
@@ -125,7 +125,7 @@ if 'shape' not in all_data['param names']:
         plt.scatter(axis, data[:, 1])
         plt.plot(axis, filt_data[1], 'm')
         plt.ylim((0, 0.01))
-        plt.savefig(plot_f_name + '.png', dpi=400, bbox_inches='tight')
+        plt.savefig(output_file_name + '.png', dpi=400, bbox_inches='tight')
 
     elif len(axis) > 1:
         # filt_data = []
@@ -142,7 +142,7 @@ if 'shape' not in all_data['param names']:
         plt.subplot(2, 1, 2)
         plt.title('std')
         plt.plot(axis[1], data[:, :, 1])
-        plt.savefig(plot_f_name + '.png', dpi=400, bbox_inches='tight')
+        plt.savefig(output_file_name + '.png', dpi=400, bbox_inches='tight')
 else:
     shape_pos = all_data['param names'].index('shape')
     shapes = [int(ele) for ele in axis.pop(shape_pos)]

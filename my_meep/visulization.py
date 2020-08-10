@@ -19,7 +19,7 @@ sys.path.append(os.getcwd())
 
 from my_meep.gen_geo_helper import read_windows, write_windows
 from my_meep.animator import my_animate, my_rms_plot, plot_3d
-from my_meep.helper import Translate, plot_f_name, get_offset
+from my_meep.helper import Translate, output_file_name, get_offset
 from my_meep.config.configs import *
 
 
@@ -39,85 +39,14 @@ def process_data(ez_data, eps, config):
 
     return ez_data, eps
 
-def plot_2d(ez_data, eps, config, web):
-    global cell_size
-    res = config.getfloat('sim', 'resolution')
-    out_every = config.getfloat('sim', 'out_every')
-    time_sim = config.getfloat('sim', 'time')
-    cell_size = get_array('geo', 'cell_size', config)
-
-    X = np.arange(-cell_size[0]/2, cell_size[0]/2, 1/res)
-    Y = np.arange(-cell_size[1]/2, cell_size[1]/2, 1/res)
-    X, Y = np.meshgrid(X, Y)
-
-    if np.max(eps) - np.min(eps) > 0.1:
-        translate = Translate(np.min(eps), np.max(eps), 0, 254)
-        vtrans = np.vectorize(translate)
-        eps = vtrans(eps).astype(np.uint8)
-        eps_edges = cv2.Canny(eps, 10, 20).astype(np.bool)
-    else:
-        eps_edges = []
-    eps_rock = eps >= 7.69
-
-    # if config.getboolean('visualization', 'transiant') and config.getboolean('general', 'perform_mp_sim'):
-    #     ez_trans = ez_trans.transpose()
-    #     ez_trans = np.moveaxis(ez_trans, -1, 0)
-    #     my_animate(ez_trans, window=1)
-
-    if config.getboolean('visualization', 'rms'):
-        if len(ez_data.shape) == 3:
-            start = int(cell_size[0]*2/out_every*3)
-
-            # 3 is to ensure the slower wave in the medium fully propogate
-            end = len(ez_data) - 1
-            if start >= end:
-                print('Time interval is not sufficient')
-                start = end - 20
-
-            print('Time period for RMS: ', [start, end])
-            ez_data[-2, eps_edges] = np.max(ez_data)*len(ez_data)/20
-            my_rms_plot(ez_data, 0, 'rms', [start, end])
-
-        elif len(ez_data.shape) == 2:
-            view_only_particles = config.getboolean(
-                'visualization', 'view_only_particles')
-            if view_only_particles:
-                ez_data[np.logical_not(eps_rock)] = 0
-            else:
-                # ez_data[eps_edges] = np.max(ez_data)*0.8
-                if not isinstance(eps_edges, list): ez_data[eps_edges.transpose()] = 5
-
-            fig = plt.figure(figsize=(7, 6))
-
-            cbar_scale = get_array('visualization', 'cbar_scale', config)
-
-            if not view_only_particles:
-                ax = plt.axes()
-                graph = plt.pcolor(X, Y, ez_data,
-                    vmin=0, vmax=0.3)
-                cb = fig.colorbar(graph, ax=ax)
-                cb.set_label(label='E^2 (V/m)^2',
-                                size='xx-large', weight='bold')
-                cb.ax.tick_params(labelsize=20)
-            else:
-                cbar_scale /= 6
-                ax = fig.gca(projection='3d')
-                trans = translate(-cell_size[0]/2,
-                                    cell_size[0]/2, 0, ez_data.shape[0])
-                ax_lim = [-1, 1, -2, 2]
-                ax_index_lim = [int(trans(ele)) for ele in ax_lim]
-
-                graph = ax.plot_surface(X[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2]:ax_index_lim[3]], Y[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2]
-                                        :ax_index_lim[3]], ez_data[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2]:ax_index_lim[3]], cmap=cm.coolwarm, linewidth=0, antialiased=False)
-
-            ax.tick_params(axis='both', which='major', labelsize=20)
-            plt.title('Fill Factor is ' + config.get('geo','fill_factor'), fontsize=20)
-            
-            # plt.show()
-
+        
 class Save_img():
-    r = redis.Redis(host='localhost', port=6379, db=0)
-    web = True
+    """ 
+    depend on whether the plotting is web, the funtion will attempt to pipe the image to the right direction 
+    """
+    def __init__(self):
+        self.r = redis.Redis(host='localhost', port=6379, db=0)
+        self.web = config.getboolean('web', 'web')
 
     def __call__(self, name):
         if self.web:
@@ -127,104 +56,204 @@ class Save_img():
             self.r.set(name, bytes_image.read())
         else:
             # save to local dir
-            plt.savefig(plot_f_name(config) + name + '.png', dpi=300, bbox_inches='tight')
+            plt.savefig(output_file_name() + name + '.png', dpi=300, bbox_inches='tight')
 
-save_img = Save_img()
+class Plot_res():
+    """
+    The class will both plot structure and RMS
+    depend on the shape of the eps data and electric field data, it plots the corresponding correct graphes
+    """
 
-def viz_res(ez_data, eps):
-    global config
-    global cell_size
+    def get_eps_rock(self):
+        if np.max(self.eps) - np.min(self.eps) > 0.1:
+            self.translate = Translate(np.min(self.eps), np.max(self.eps), 0, 254)
+            vtrans = np.vectorize(self.translate)
+            self.eps = vtrans(self.eps).astype(np.uint8)
+            self.eps_edges = cv2.Canny(self.eps, 10, 20).astype(np.bool)
+        else:
+            self.eps_edges = []
+        self.eps_rock = self.eps >= 7.69
+        
+    def get_configs(self):
+        self.web = config.getboolean('web', 'web')
+        self.res = config.getfloat('sim', 'resolution')
+        self.out_every = config.getfloat('sim', 'out_every')
+        self.time_sim = config.getfloat('sim', 'time')
+        self.cbar_scale = get_array('visualization', 'cbar_scale', config)
 
-    web = True
+    def get_conture_axis(self):
+        X = np.arange(-cell_size[0]/2, cell_size[0]/2, 1/self.res)
+        Y = np.arange(-cell_size[1]/2, cell_size[1]/2, 1/self.res)
+        self.X, self.Y = np.meshgrid(X, Y)
+        
 
-    ez_data, eps = process_data(ez_data, eps, config)
+    def __init__(self, ez_data, eps, sim, eps_data):
+        global config
+        global cell_size
 
-    if len(eps.shape) == 2:
-        plot_2d(ez_data, eps, config, web)
-    else:
-        offset, offset_index = get_offset(ez_data)
-        plot_3d(ez_data, offset, offset_index)
+        self.save_img = Save_img()
+        self.ez_data = ez_data
+        self.eps=eps
+        self.sim=sim
+        self.eps_data=eps_data
 
-    save_img('rms')
+        self.ez_data, self.eps = process_data(self.ez_data, self.eps, config)
+
+        self.ez_dim = len(ez_data.shape)
+        self.eps_dim = len(eps_data.shape)
+
+        self.get_configs()
+        self.get_eps_rock()
+        self.get_conture_axis()
+        
+    def structure_plot(self):
+        if sim_dim == 2:
+            plt.figure()
+            self.sim.plot2D()
+        else:
+            offset, offset_index = get_offset(self.eps_data)
+            plot_3d(self.eps_data, offset, offset_index)
+
+    def transient_3d(self):
+        ez_trans = self.ez_trans.transpose()
+        ez_trans = np.moveaxis(ez_trans, -1, 0)
+        my_animate(ez_trans, window=1)
+
+    def static_3d(self):
+        offset, offset_index = get_offset(self.ez_data)
+        plot_3d(self.ez_data, offset, offset_index)
+
+    def transient_2d(self):
+        start = int(cell_size[0]*2/self.out_every*3)
+
+        # 3 is to ensure the slower wave in the medium fully propogate
+        end = len(self.ez_data) - 1
+        if start >= end:
+            print('Time interval is not sufficient')
+            start = end - 20
+
+        print('Time period for RMS: ', [start, end])
+        self.ez_data[-2, self.eps_edges] = np.max(self.ez_data)*len(self.ez_data)/20
+        my_rms_plot(self.ez_data, 0, 'rms', [start, end])
+
+    def static_2d(self):
+
+        fig = plt.figure(figsize=(7, 6))
+        # ez_data[eps_edges] = np.max(ez_data)*0.8
+        if not isinstance(self.eps_edges, list): self.ez_data[self.eps_edges.transpose()] = 5
+        ax = plt.axes()
+        graph = plt.pcolor(self.X, self.Y, self.ez_data,
+            vmin=0, vmax=0.3)
+        cb = fig.colorbar(graph, ax=ax)
+        cb.set_label(label='E^2 (V/m)^2',
+                        size='xx-large', weight='bold')
+        cb.ax.tick_params(labelsize=20)        
+        ax.tick_params(axis='both', which='major', labelsize=20)
+        plt.title('Fill Factor is ' + config.get('geo','fill_factor'), fontsize=20)
+
+    def static_2d_particle(self):
+        fig = plt.figure(figsize=(7, 6))
+        self.ez_data[np.logical_not(self.eps_rock)] = 0
+        self.cbar_scale /= 6
+        ax = fig.gca(projection='3d')
+        trans = self.translate(-cell_size[0]/2,
+                            cell_size[0]/2, 0, self.ez_data.shape[0])
+        ax_lim = [-1, 1, -2, 2]
+        ax_index_lim = [int(trans(ele)) for ele in ax_lim]
+
+        graph = ax.plot_surface(self.X[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2]:ax_index_lim[3]], self.Y[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2] :ax_index_lim[3]], self.ez_data[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2]:ax_index_lim[3]], cmap=cm.coolwarm, linewidth=0, antialiased=False)    
+        ax.tick_params(axis='both', which='major', labelsize=20)
+        plt.title('Fill Factor is ' + config.get('geo','fill_factor'), fontsize=20)
+
+    def __call__(self):
+        if config.getboolean('visualization', 'structure'):
+            self.structure_plot()
+            self.save_img('structure')
+            
+        ez_dim = self.ez_dim
+        eps_dim = self.eps_dim
+
+        if ez_dim == 4 and eps_dim == 3:
+            self.transient_3d()
+        elif ez_dim == 3 and eps_dim == 3:
+            self.static_3d()
+        elif ez_dim == 3 and eps_dim == 2:
+            self.transient_2d()
+        elif ez_dim == 2 and eps_dim == 2:
+            view_only_particles = config.getboolean('visualization', 'view_only_particles')
+            if view_only_particles:
+                self.static_2d_particle()
+            else:
+                self.static_2d()
+
+        self.save_img('rms')
 
 
-def viz_struct(sim, sim_dim, eps_data):
-    global config
-    
-    if sim_dim == 2:
-        plt.figure()
-        sim.plot2D()
-    else:
-        offset, offset_index = get_offset(eps_data)
-        plot_3d(eps_data, offset, offset_index)
+# if __name__ == '__main__':
+#     ez_data = read_windows('/mnt/c/peter_abaqus/Summer-Research-Project/output/export/' + 'cube_r_1.0_gap_4.5_xloc_3.8_fcen_0.8167_ff_0.5_3D.ez')
+#     ez_data_2d = read_windows('/mnt/c/peter_abaqus/Summer-Research-Project/output/export/' + '__cube_r_1.0_gap_0.0_xloc_0.0_fcen_0.8167_ff_0.5_rt_0.0_2D.ez')
 
-    save_img('structure')
+#     all_mean = []
 
-if __name__ == '__main__':
-    ez_data = read_windows('/mnt/c/peter_abaqus/Summer-Research-Project/output/export/' + 'cube_r_1.0_gap_4.5_xloc_3.8_fcen_0.8167_ff_0.5_3D.ez')
-    ez_data_2d = read_windows('/mnt/c/peter_abaqus/Summer-Research-Project/output/export/' + '__cube_r_1.0_gap_0.0_xloc_0.0_fcen_0.8167_ff_0.5_rt_0.0_2D.ez')
+#     ez_data = ez_data[45:285, 45:285, 45:285]
+#     ez_data_2d = ez_data_2d[45:285, 45:285]
 
-    all_mean = []
+#     ez_data_mean = np.mean(ez_data)
 
-    ez_data = ez_data[45:285, 45:285, 45:285]
-    ez_data_2d = ez_data_2d[45:285, 45:285]
+#     # for i in range(len(ez_data)):
 
-    ez_data_mean = np.mean(ez_data)
+#     #     diff = ez_data[ :,i, :] - ez_data_2d
+#     #     # diff = np.divide(diff, ez_data_2d)
+#     #     diff = abs(diff)
 
-    # for i in range(len(ez_data)):
+#     #     mean = np.mean(diff)
+#     #     all_mean.append(mean/ez_data_mean*100)
 
-    #     diff = ez_data[ :,i, :] - ez_data_2d
-    #     # diff = np.divide(diff, ez_data_2d)
-    #     diff = abs(diff)
+#     # plt.plot(all_mean)
+#     # plt.ylim([0, 100])
+#     # plt.title('Relative error compare to EZ 3D', fontsize=25)
+#     # plt.xlabel('X axis location', fontsize=20)
+#     # plt.ylabel('relative error value (%)', fontsize=20)
+#     # ax = plt.gca()
+#     # ax.tick_params(labelsize=20)
+#     # plt.savefig(output_file_name() + 'percentage_error.png',
+#     #                         dpi=400, bbox_inches='tight')
 
-    #     mean = np.mean(diff)
-    #     all_mean.append(mean/ez_data_mean*100)
+#     ez_data *= 1.0/ez_data.max()
+#     ez_data_2d *= 1.0/ez_data_2d.max()
 
-    # plt.plot(all_mean)
-    # plt.ylim([0, 100])
-    # plt.title('Relative error compare to EZ 3D', fontsize=25)
-    # plt.xlabel('X axis location', fontsize=20)
-    # plt.ylabel('relative error value (%)', fontsize=20)
-    # ax = plt.gca()
-    # ax.tick_params(labelsize=20)
-    # plt.savefig(plot_f_name() + 'percentage_error.png',
-    #                         dpi=400, bbox_inches='tight')
+#     i = 107
+#     ez_data = ez_data[ :,i, :]
+#     diff = ez_data - ez_data_2d
+#     diff = np.divide(diff, ez_data)
+#     diff = abs(diff)
 
-    ez_data *= 1.0/ez_data.max()
-    ez_data_2d *= 1.0/ez_data_2d.max()
-
-    i = 107
-    ez_data = ez_data[ :,i, :]
-    diff = ez_data - ez_data_2d
-    diff = np.divide(diff, ez_data)
-    diff = abs(diff)
-
-    fig = plt.figure()
-    graph = plt.pcolor(diff, vmin=0, vmax=100)
-    ax = plt.gca()
-    cb = fig.colorbar(graph, ax=ax)
-    cb.ax.tick_params(labelsize=20)
-    cb.set_label(label='Percentage Error',
-                    size='xx-large', weight='bold')
-    plt.title('Relative error compare to EZ 3D', fontsize=25)
-    plt.xlabel('x', fontsize=20)
-    plt.ylabel('y', fontsize=20)
-    ax = plt.gca()
-    ax.tick_params(labelsize=18)
-    plt.savefig(plot_f_name() + 'rms_error.png',
-                            dpi=400, bbox_inches='tight')
+#     fig = plt.figure()
+#     graph = plt.pcolor(diff, vmin=0, vmax=100)
+#     ax = plt.gca()
+#     cb = fig.colorbar(graph, ax=ax)
+#     cb.ax.tick_params(labelsize=20)
+#     cb.set_label(label='Percentage Error',
+#                     size='xx-large', weight='bold')
+#     plt.title('Relative error compare to EZ 3D', fontsize=25)
+#     plt.xlabel('x', fontsize=20)
+#     plt.ylabel('y', fontsize=20)
+#     ax = plt.gca()
+#     ax.tick_params(labelsize=18)
+#     plt.savefig(output_file_name() + 'rms_error.png',
+#                             dpi=400, bbox_inches='tight')
 
 
-    fig = plt.figure()
-    graph = plt.pcolor(ez_data_2d)
-    ax = plt.gca()
-    cb = fig.colorbar(graph, ax=ax)
-    plt.title('ez_data 2d')
+#     fig = plt.figure()
+#     graph = plt.pcolor(ez_data_2d)
+#     ax = plt.gca()
+#     cb = fig.colorbar(graph, ax=ax)
+#     plt.title('ez_data 2d')
 
-    fig = plt.figure()
-    graph = plt.pcolor(ez_data)
-    ax = plt.gca()
-    cb = fig.colorbar(graph, ax=ax)
-    plt.title('ez_data')
+#     fig = plt.figure()
+#     graph = plt.pcolor(ez_data)
+#     ax = plt.gca()
+#     cb = fig.colorbar(graph, ax=ax)
+#     plt.title('ez_data')
 
-    plt.show()
+#     plt.show()

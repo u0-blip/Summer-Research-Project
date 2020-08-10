@@ -5,7 +5,7 @@ from functools import partial
 
 
 from my_meep.config.config_manager import Config_manager
-import my_meep.visulization as visualization
+from my_meep.visulization import Plot_res
 import my_meep.gen_geo_helper as gen_geo_helper
 import gen_voronoi.simple_geo_and_arg as simp
 from my_meep.gen_geo import Gen_geo
@@ -43,29 +43,32 @@ def sim_main(vor, config1):
     else:
         ez_data = start_sim(geo, eps_data)
 
-
     print('The RMS matrix shape: ' + str(ez_data.shape))
 
     mean, std = result_statistics(ez_data, eps_data)
 
-    if config.getboolean('visualization', 'transiant') or config.getboolean('visualization', 'rms'):
-        visualization.viz_res(ez_data, eps_data)
+    plot_res = Plot_res(ez_data, eps_data, create_sim(geo=geo), eps_data)
 
-    if config.getboolean('visualization', 'structure'):
-        visualization.viz_struct(create_sim(geo=geo), sim_dim, eps_data)
+    plot_res()
 
     return mean, std, actual_fill_factor
     
 def wsl_main(web_config=None):
-    # mp.quiet(True)
+    mp.quiet(True)
+
     global config
     if web_config:
         config = deepcopy(web_config)
+        config.add_section('web')
+        config.set('web', 'web', '1')
+    else:
+        config.add_section('web')
+        config.set('web', 'web', '0')
 
     vor = get_vor(config)
     config_manager = Config_manager(config)
     configs = config_manager.break_down_config()
-    print(configs)
+    
     func = partial(sim_main, vor)
 
     # with mproc.Pool(processes=config.getint('general', 'sim_cores')) as pool:

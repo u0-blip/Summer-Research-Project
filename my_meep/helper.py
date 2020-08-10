@@ -18,7 +18,7 @@ class Translate:
         # Convert the 0-1 range into a value in the right range.
         return self.rightMin + (valueScaled * self.rightSpan)
 
-def plot_f_name(): 
+def output_file_name(): 
     global config
     
     name_var = [('geo', 'shape'), ('geo', 'particle_size'), ('geo', 'distance'), ('geo', 'x_loc'), ('source', 'fcen'), ('geo', 'fill_factor'), ('geo', 'rotation')]
