@@ -9,8 +9,9 @@ from mpl_toolkits.mplot3d import Axes3D
 from gen_geo.gmsh_create import voronoi_create
 from gen_geo.process_inp_file import processing, abaqusing
 from gen_geo.bounded_voronoi import b_voronoi, bounding_box
-from my_meep.config.configs import *
-from process_res import process_meep_arr
+from my_meep.config.configs import get_array
+from my_meep.config.config_variables import *
+from Result_manager import process_meep_arr
 
 def win_main():
     if config.getboolean('general', 'gen_gmsh'):

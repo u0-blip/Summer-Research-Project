@@ -1,5 +1,6 @@
 import numpy as np
-from my_meep.config.configs import *
+from my_meep.config.configs import get_array
+from my_meep.config.config_variables import *
 
 import os
 if os.name == 'posix':
@@ -26,9 +27,7 @@ def rotate(origin, point, angle):
     return np.array([qx, qy, point[2]])
 
 
-def get_coord(radius):
-    global config
-
+def get_coord(radius, config):
     shape = config.get('geo', 'shape')
     num_particles = config.getint('geo', 'num_particles')
     dist = config.getfloat('geo', 'distance')
@@ -51,9 +50,7 @@ def np2mp(arr):
         res.append(mp.Vector3(*point))
     return res
 
-def get_polygon_coord(center, radius):
-    global config
-    
+def get_polygon_coord(center, radius, config):
     shape = config.get('geo', 'shape')
     a = np.sqrt(3)/2*radius
     if shape == 'hexagon':

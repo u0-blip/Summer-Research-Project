@@ -4,20 +4,24 @@ import numpy as np
 import matplotlib.gridspec as gridspec
 import matplotlib.animation as animation
 import matplotlib.colors as colors
-from my_meep.config.configs import *
+
+from my_meep.config.configs import get_array
+from my_meep.config.config_variables import *
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-res = config.getfloat('sim', 'resolution')
-X = np.arange(-cell_size[0]/2, cell_size[0]/2, 1/res)
-Y = np.arange(-cell_size[1]/2, cell_size[1]/2, 1/res)
-X, Y = np.meshgrid(X, Y)
+
 
 class IndexTracker(object):
-    def __init__(self, ax, X):
+    def __init__(self, ax, config):
         self.ax = ax
         ax.set_title('use scroll wheel to navigate images')
+
+        res = config.getfloat('sim', 'resolution')
+        X = np.arange(-cell_size[0]/2, cell_size[0]/2, 1/res)
+        Y = np.arange(-cell_size[1]/2, cell_size[1]/2, 1/res)
+        X, Y = np.meshgrid(X, Y)
 
         self.X = X
         rows, cols, self.slices = X.shape
@@ -39,7 +43,13 @@ class IndexTracker(object):
         ax.set_ylabel('slice %s' % self.ind)
         self.im.axes.figure.canvas.draw()
 
-def plot_3d(eps_data, offset, offset_index):
+def plot_3d(eps_data, offset, offset_index, config):
+
+    res = config.getfloat('sim', 'resolution')
+    X = np.arange(-cell_size[0]/2, cell_size[0]/2, 1/res)
+    Y = np.arange(-cell_size[1]/2, cell_size[1]/2, 1/res)
+    X, Y = np.meshgrid(X, Y)
+
     fig = plt.figure(constrained_layout=True, figsize=(17, 5))
     gs = fig.add_gridspec(1, 3)
 

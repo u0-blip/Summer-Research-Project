@@ -1,5 +1,6 @@
 import os
-from my_meep.config.configs import *
+from my_meep.config.configs import get_array
+from my_meep.config.config_variables import *
 
 class Translate:
     def __init__(self, leftMin, leftMax, rightMin, rightMax):
@@ -18,8 +19,7 @@ class Translate:
         # Convert the 0-1 range into a value in the right range.
         return self.rightMin + (valueScaled * self.rightSpan)
 
-def output_file_name(): 
-    global config
+def output_file_name(config): 
     
     name_var = [('geo', 'shape'), ('geo', 'particle_size'), ('geo', 'distance'), ('geo', 'x_loc'), ('source', 'fcen'), ('geo', 'fill_factor'), ('geo', 'rotation')]
     name_discr = ['', 'r', 'gap', 'xloc', 'fcen', 'ff', 'rt']

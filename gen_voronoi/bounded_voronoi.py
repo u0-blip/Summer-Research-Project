@@ -1,4 +1,5 @@
-from my_meep.config.configs import *
+from my_meep.config.configs import get_array
+from my_meep.config.config_variables import *
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp

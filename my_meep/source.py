@@ -8,7 +8,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 import my_meep.gen_geo_helper as gen_geo_helper
-from my_meep.config.configs import *
+from my_meep.config.configs import get_array
+from my_meep.config.config_variables import *
 import meep as mp
 
 def gaussian_beam(sigma, k, x0):
@@ -16,7 +17,7 @@ def gaussian_beam(sigma, k, x0):
         return cmath.exp(1j*2*math.pi*k.dot(x-x0)-(x-x0).dot(x-x0)/(2*sigma**2))
     return _gaussian_beam
 
-def source_wrapper():
+def source_wrapper(config):
     s = get_array('source', 'size', config)
     center = get_array('source', 'center', config)
     dim = config.getfloat('sim', 'dimension')
@@ -31,13 +32,13 @@ def source_wrapper():
 
     mode = config.get('source', 'mode')
     fwidth = config.getfloat('source', 'fwidth')
-    fcen = eval(config.get('source', 'fcen')) # center frequency of CW source (wavelength is 1 μm)
+    wcen = config.getfloat('source', 'fcen')*0.34753
 
     if not config.getboolean('sim', 'calc_flux'):
         pre_source = mp.ContinuousSource(
-            fcen, fwidth=fwidth*fcen, is_integrated=True)
+            wcen, fwidth=fwidth*wcen, is_integrated=True)
     else:
-        pre_source = mp.GaussianSource(fcen, fwidth=fwidth*fcen)
+        pre_source = mp.GaussianSource(wcen, fwidth=fwidth*wcen)
     if mode == 'normal':
         return [
             mp.Source(src=pre_source,
@@ -49,7 +50,7 @@ def source_wrapper():
     elif mode == 'gaussian':
         tilt_angle = math.radians(config.getfloat(
             'source', 'tilt_angle'))  # angle of tilted beam
-        k = mp.Vector3(x=2).rotate(mp.Vector3(z=1), tilt_angle).scale(fcen)
+        k = mp.Vector3(x=2).rotate(mp.Vector3(z=1), tilt_angle).scale(wcen)
         sigma = config.getfloat('source', 'sigma')  # beam width
         # src_pt = mp.Vector3(y=4) # if you change center, you have to change phase and weird shit like that
 

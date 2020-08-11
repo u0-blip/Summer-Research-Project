@@ -20,66 +20,58 @@ sys.path.append(os.getcwd())
 from my_meep.gen_geo_helper import read_windows, write_windows
 from my_meep.animator import my_animate, my_rms_plot, plot_3d
 from my_meep.helper import Translate, output_file_name, get_offset
-from my_meep.config.configs import *
+from my_meep.config.configs import get_array
+from my_meep.config.config_variables import *
 
 
-def process_data(ez_data, eps, config):
-    res = config.getfloat('sim', 'resolution')
-    if not config.getboolean('general', 'perform_mp_sim'):
-        try:
-            ez_data = read_windows(
-                data_dir + project_name + '.mpout').transpose()
-            ez_data = np.moveaxis(ez_data, -1, 0)
-            eps = read_windows(data_dir + project_name + '.eps').transpose()
-        except Exception as e:
-            logging.error(traceback.format_exc())
-            logging.log(1, e)
-    else:
-        ez_data = ez_data.transpose()
-
-    return ez_data, eps
 
         
 class Save_img():
     """ 
     depend on whether the plotting is web, the funtion will attempt to pipe the image to the right direction 
     """
-    def __init__(self):
-        self.r = redis.Redis(host='localhost', port=6379, db=0)
+    def __init__(self, config):
+        self.rdb = redis.Redis(host='localhost', port=6379, db=0)
         self.web = config.getboolean('web', 'web')
+        self.config = config
 
     def __call__(self, name):
         if self.web:
             bytes_image = io.BytesIO()
             plt.savefig(bytes_image, format='png')
             bytes_image.seek(0)
-            self.r.set(name, bytes_image.read())
+            self.rdb.set(name, bytes_image.read())
         else:
             # save to local dir
-            plt.savefig(output_file_name() + name + '.png', dpi=300, bbox_inches='tight')
+            plt.savefig(output_file_name(self.config) + name + '.png', dpi=300, bbox_inches='tight')
 
 class Plot_res():
     """
     The class will both plot structure and RMS
     depend on the shape of the eps data and electric field data, it plots the corresponding correct graphes
     """
+    def get_ez_from_file(self):
+        if not self.config.getboolean('general', 'perform_mp_sim'):
+            ez_data = read_windows(data_dir + project_name + '.mpout').transpose()
+            self.ez_data = np.moveaxis(ez_data, -1, 0)
+            self.eps = read_windows(data_dir + project_name + '.eps').transpose()
 
-    def get_eps_rock(self):
+    def get_eps_edge(self):
         if np.max(self.eps) - np.min(self.eps) > 0.1:
             self.translate = Translate(np.min(self.eps), np.max(self.eps), 0, 254)
             vtrans = np.vectorize(self.translate)
             self.eps = vtrans(self.eps).astype(np.uint8)
             self.eps_edges = cv2.Canny(self.eps, 10, 20).astype(np.bool)
         else:
-            self.eps_edges = []
-        self.eps_rock = self.eps >= 7.69
+            self.eps_edges = None
         
     def get_configs(self):
-        self.web = config.getboolean('web', 'web')
-        self.res = config.getfloat('sim', 'resolution')
-        self.out_every = config.getfloat('sim', 'out_every')
-        self.time_sim = config.getfloat('sim', 'time')
-        self.cbar_scale = get_array('visualization', 'cbar_scale', config)
+        self.web = self.config.getboolean('web', 'web')
+        self.res = self.config.getfloat('sim', 'resolution')
+        self.out_every = self.config.getfloat('sim', 'out_every')
+        self.time_sim = self.config.getfloat('sim', 'time')
+        self.cbar_scale = get_array('visualization', 'cbar_scale', self.config)
+        self.view_only_particles = self.config.getboolean('visualization', 'view_only_particles')
 
     def get_conture_axis(self):
         X = np.arange(-cell_size[0]/2, cell_size[0]/2, 1/self.res)
@@ -87,24 +79,26 @@ class Plot_res():
         self.X, self.Y = np.meshgrid(X, Y)
         
 
-    def __init__(self, ez_data, eps, sim, eps_data):
-        global config
-        global cell_size
+    def __init__(self, result_manager, sim, eps_data):
 
-        self.save_img = Save_img()
-        self.ez_data = ez_data
-        self.eps=eps
+
+        self.ez_data = result_manager.ez_data.transpose()
+        self.eps=result_manager.eps.transpose()
+        self.eps_rock = result_manager.eps_rock.transpose()
+        self.ez_data_particle_only = result_manager.ez_data_particle_only.transpose()
+        self.config = result_manager.config
+
         self.sim=sim
         self.eps_data=eps_data
 
-        self.ez_data, self.eps = process_data(self.ez_data, self.eps, config)
+        self.get_ez_from_file()
 
-        self.ez_dim = len(ez_data.shape)
-        self.eps_dim = len(eps_data.shape)
-
+        self.ez_dim = len(self.ez_data.shape)
+        self.eps_dim = len(self.eps_data.shape)
         self.get_configs()
-        self.get_eps_rock()
+        self.get_eps_edge()
         self.get_conture_axis()
+        self.save_img = Save_img(self.config)
         
     def structure_plot(self):
         if sim_dim == 2:
@@ -115,7 +109,7 @@ class Plot_res():
             plot_3d(self.eps_data, offset, offset_index)
 
     def transient_3d(self):
-        ez_trans = self.ez_trans.transpose()
+        ez_trans = self.ez_trans
         ez_trans = np.moveaxis(ez_trans, -1, 0)
         my_animate(ez_trans, window=1)
 
@@ -136,37 +130,41 @@ class Plot_res():
         self.ez_data[-2, self.eps_edges] = np.max(self.ez_data)*len(self.ez_data)/20
         my_rms_plot(self.ez_data, 0, 'rms', [start, end])
 
-    def static_2d(self):
+    def add_particle_edge(self):
+        self.ez_data[self.eps_edges] = 5
 
+    def static_2d(self, ez_data):
         fig = plt.figure(figsize=(7, 6))
-        # ez_data[eps_edges] = np.max(ez_data)*0.8
-        if not isinstance(self.eps_edges, list): self.ez_data[self.eps_edges.transpose()] = 5
         ax = plt.axes()
-        graph = plt.pcolor(self.X, self.Y, self.ez_data,
-            vmin=0, vmax=0.3)
+        graph = plt.pcolor(self.X, self.Y, ez_data, vmin=0, vmax=0.01)
         cb = fig.colorbar(graph, ax=ax)
-        cb.set_label(label='E^2 (V/m)^2',
-                        size='xx-large', weight='bold')
+        cb.set_label(label='E^2 (V/m)^2', size='xx-large', weight='bold')
         cb.ax.tick_params(labelsize=20)        
         ax.tick_params(axis='both', which='major', labelsize=20)
-        plt.title('Fill Factor is ' + config.get('geo','fill_factor'), fontsize=20)
+        plt.title('Fill Factor is ' + self.config.get('geo','fill_factor'), fontsize=20)
+
+    def static_2d_all(self):
+        self.static_2d(self.ez_data)
 
     def static_2d_particle(self):
+        self.static_2d(self.ez_data_particle_only)
+
+    def static_2d_particle_contour(self):
         fig = plt.figure(figsize=(7, 6))
-        self.ez_data[np.logical_not(self.eps_rock)] = 0
+
         self.cbar_scale /= 6
         ax = fig.gca(projection='3d')
         trans = self.translate(-cell_size[0]/2,
-                            cell_size[0]/2, 0, self.ez_data.shape[0])
+                            cell_size[0]/2, 0, self.ez_data_particle_only.shape[0])
         ax_lim = [-1, 1, -2, 2]
         ax_index_lim = [int(trans(ele)) for ele in ax_lim]
 
-        graph = ax.plot_surface(self.X[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2]:ax_index_lim[3]], self.Y[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2] :ax_index_lim[3]], self.ez_data[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2]:ax_index_lim[3]], cmap=cm.coolwarm, linewidth=0, antialiased=False)    
+        graph = ax.plot_surface(self.X[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2]:ax_index_lim[3]], self.Y[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2] :ax_index_lim[3]], self.ez_data_particle_only[ax_index_lim[0]:ax_index_lim[1], ax_index_lim[2]:ax_index_lim[3]], cmap=cm.coolwarm, linewidth=0, antialiased=False)    
         ax.tick_params(axis='both', which='major', labelsize=20)
-        plt.title('Fill Factor is ' + config.get('geo','fill_factor'), fontsize=20)
+        plt.title('Fill Factor is ' + self.config.get('geo','fill_factor'), fontsize=20)
 
     def __call__(self):
-        if config.getboolean('visualization', 'structure'):
+        if self.config.getboolean('visualization', 'structure'):
             self.structure_plot()
             self.save_img('structure')
             
@@ -174,17 +172,23 @@ class Plot_res():
         eps_dim = self.eps_dim
 
         if ez_dim == 4 and eps_dim == 3:
+            print('trans 3d')
             self.transient_3d()
         elif ez_dim == 3 and eps_dim == 3:
+            print('static 3d')
             self.static_3d()
         elif ez_dim == 3 and eps_dim == 2:
+            print('trans 2d')
             self.transient_2d()
         elif ez_dim == 2 and eps_dim == 2:
-            view_only_particles = config.getboolean('visualization', 'view_only_particles')
-            if view_only_particles:
+            if self.view_only_particles:
+                print('static 2d particles')
+                self.add_particle_edge()
                 self.static_2d_particle()
             else:
-                self.static_2d()
+                print('static 2d')
+                self.add_particle_edge()
+                self.static_2d_all()
 
         self.save_img('rms')
 
@@ -216,7 +220,7 @@ class Plot_res():
 #     # plt.ylabel('relative error value (%)', fontsize=20)
 #     # ax = plt.gca()
 #     # ax.tick_params(labelsize=20)
-#     # plt.savefig(output_file_name() + 'percentage_error.png',
+#     # plt.savefig(output_file_name(self.config) + 'percentage_error.png',
 #     #                         dpi=400, bbox_inches='tight')
 
 #     ez_data *= 1.0/ez_data.max()
@@ -240,7 +244,7 @@ class Plot_res():
 #     plt.ylabel('y', fontsize=20)
 #     ax = plt.gca()
 #     ax.tick_params(labelsize=18)
-#     plt.savefig(output_file_name() + 'rms_error.png',
+#     plt.savefig(output_file_name(self.config) + 'rms_error.png',
 #                             dpi=400, bbox_inches='tight')
 
 

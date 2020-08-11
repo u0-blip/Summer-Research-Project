@@ -11,7 +11,8 @@ from gen_voronoi import bounded_voronoi
 from gen_voronoi import convex_hull
 from gen_voronoi.geo_classes import *
 from gen_voronoi.simple_geo_and_arg import get_polygon_coord, get_coord
-from my_meep.config.configs import *
+from my_meep.config.configs import get_array
+from my_meep.config.config_variables import *
 
 if os.name == 'posix':
     import meep as mp
@@ -207,7 +208,7 @@ def index2coord(index, size_arr, size_geo):
     return index
 
 
-def get_rad(particle_size):
+def get_rad(particle_size, config):
     shape = config.get('geo', 'shape')
     if shape == "cube":
         return np.sqrt(particle_size)
@@ -221,10 +222,10 @@ def get_rad(particle_size):
         return np.sqrt(particle_size)
 
 
-def gen_checker(size_cell, dim=2):
+def gen_checker(config):
     checker_coord = []
     particle_size = config.getfloat('geo', 'particle_size')
-    radius = get_rad(particle_size)
+    radius = get_rad(particle_size, config)
     size_cell = get_array('geo', 'cell_size', config)
     ff = config.getfloat('geo', 'fill_factor')
     r_sub_cell = np.sqrt((1/ff)*particle_size)
@@ -253,7 +254,7 @@ def gen_checker(size_cell, dim=2):
     return checker_coord
 
 
-def gaussian_size(num):
+def gaussian_size(num, config):
     particle_size = config.getfloat('geo', 'particle_size')
     std = config.getfloat('geo', 'std')
     gauss_size = np.random.lognormal(np.log(particle_size), std, (num))
