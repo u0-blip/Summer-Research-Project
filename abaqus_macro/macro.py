@@ -18,7 +18,7 @@ def del_reass():
     import optimization
     import job
     import sketch
-    import visualization
+    import Visualization
     import xyPlot
     import displayGroupOdbToolset as dgo
     import connectorBehavior
@@ -40,7 +40,7 @@ def assign_sec():
     import optimization
     import job
     import sketch
-    import visualization
+    import Visualization
     import xyPlot
     import displayGroupOdbToolset as dgo
     import connectorBehavior
@@ -76,7 +76,7 @@ def del_part_sec():
     import optimization
     import job
     import sketch
-    import visualization
+    import Visualization
     import xyPlot
     import displayGroupOdbToolset as dgo
     import connectorBehavior

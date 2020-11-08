@@ -4,3 +4,8 @@ test
 *.h5
 *.mpout
 *.clean
+__pycache__/
+*.egg-info
+.vscode
+config/
+super/

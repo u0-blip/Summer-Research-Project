@@ -17,7 +17,7 @@ import mesh
 import optimization
 import job
 import sketch
-import visualization
+import Visualization
 import xyPlot
 import displayGroupOdbToolset as dgo
 import connectorBehavior

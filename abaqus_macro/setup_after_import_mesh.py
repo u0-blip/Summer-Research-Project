@@ -1,4 +1,4 @@
-# -*- coding: mbcs -*-
+
 # Do not delete the following import lines
 import sys
 import pickle

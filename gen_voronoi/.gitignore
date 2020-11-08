@@ -1,0 +1,6 @@
+gmsh_out/
+__pycache__
+pythonocc-demos
+build/
+*.prof
+*.egg-info
