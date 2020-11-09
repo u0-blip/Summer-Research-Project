@@ -10,15 +10,14 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from copy import deepcopy
 from itertools import product
+import os 
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
 if 'config' not in globals():
     primitive_config = configparser.ConfigParser()
-    if os.name == 'nt':
-        primitive_config.read(r'C:\peter_abaqus\Summer-Research-Project\my_meep\my_meep\config\sim.ini')
-    elif os.name == 'posix':
-        primitive_config.read('/mnt/c/peter_abaqus/Summer-Research-Project/my_meep/my_meep/config/sim checker test.ini')
+    primitive_config.read(os.path.join(dir_path,  'sim checker test.ini'))
 
 # config_og = deepcopy(config)
 
