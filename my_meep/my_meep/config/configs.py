@@ -17,11 +17,8 @@ if 'config' not in globals():
     primitive_config = configparser.ConfigParser()
     if os.name == 'nt':
         primitive_config.read(r'C:\peter_abaqus\Summer-Research-Project\my_meep\my_meep\config\sim.ini')
-        data_dir = primitive_config.get('process_inp', 'data')
     elif os.name == 'posix':
         primitive_config.read('/mnt/c/peter_abaqus/Summer-Research-Project/my_meep/my_meep/config/sim checker test.ini')
-        # config.read('/mnt/c/peter_abaqus/Summer-Research-Project/meep/sim checker fill factor.ini')
-        data_dir = primitive_config.get('process_inp', 'posix_data')
 
 # config_og = deepcopy(config)
 
