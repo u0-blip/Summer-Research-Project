@@ -12,7 +12,7 @@ import redis
 def get_vor(config):
     """ get the voronoi geometry file """
     last = time()
-    r = redis.Redis(port=6379, host='0.0.0.0', db=0)
+    r = redis.Redis(port=6379, host='meep_celery', db=0)
     if config.get('Simulation', 'sim_types') == 'voronoi':
         if config.getboolean('General', 'gen_vor') or r.get('vor_vor') is None:
             gen_vor = Gen_vor(config)

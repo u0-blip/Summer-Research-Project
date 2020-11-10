@@ -10,7 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting
 from gen_voronoi.convex_hull import *
 from gen_voronoi.geo_classes import voronoi_geo
 import redis
-r = redis.Redis(port=6379, host='0.0.0.0', db=0)
+r = redis.Redis(port=6379, host='meep_celery', db=0)
 sys.path.append('..')
 
 class Gen_vor():

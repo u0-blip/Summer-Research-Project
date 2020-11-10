@@ -21,7 +21,7 @@ import redis
 import json
 import numpy as np
 
-r = redis.Redis(port=6379, host='0.0.0.0', db=0)
+r = redis.Redis(port=6379, host='meep_celery', db=0)
 
 def sim_main(vor, current_user_id, config):
     # dimensions = mp.CYLINDRICAL
