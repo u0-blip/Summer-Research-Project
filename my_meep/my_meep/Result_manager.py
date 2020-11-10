@@ -14,7 +14,7 @@ import redis
 import json
 import numpy as np
 
-r = redis.Redis(port=6379, host='localhost', db=0)
+r = redis.Redis(port=6379, host='0.0.0.0', db=0)
 
 class Result_manager():
     @staticmethod
@@ -160,5 +160,5 @@ def write_res(config, data, var_descrip_str, current_user_id, param_iterated):
             to_excel(data, information, writer)
             output.seek(0)
 
-            r = redis.Redis(port=6379, host='localhost')
+            r = redis.Redis(port=6379, host='0.0.0.0', db=0)
             r.set(str(current_user_id) + 'mean_result', output.read())

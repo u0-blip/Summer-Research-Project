@@ -29,7 +29,7 @@ import mpld3
 from mpld3 import plugins, utils
 
 
-r = redis.Redis(port=6379, host='localhost', db=0)
+r = redis.Redis(port=6379, host='0.0.0.0', db=0)
         
 class Save_img():
     """ 

@@ -16,7 +16,7 @@ from my_meep import gen_geo_helper
 import meep as mp
 from copy import deepcopy
 
-r = redis.Redis(port=6379, host='localhost', db=0)
+r = redis.Redis(port=6379, host='0.0.0.0', db=0)
 
 class Sim_manager:
     def get_eps(self):
